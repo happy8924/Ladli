@@ -1,0 +1,159 @@
+:root {
+  /* Heritage Luxury Palette */
+  --primary: #7B1113;        /* Deep Heritage Maroon */
+  --primary-light: #A52A2D;
+  --secondary: #D4AF37;      /* Metallic Gold */
+  --accent: #E8D196;         /* Soft Cream Gold */
+  --background: #FFF9F0;     /* Silk Cream */
+  --surface: #FFFFFF;
+  --text-main: #1A1A1A;      /* Ebony */
+  --text-muted: #5C5C5C;
+  --border: #E8D196;
+
+  /* Elevate & Boutique Styles */
+  --shadow-lux: 0 10px 30px rgba(123, 17, 19, 0.08);
+  --radius-pro: 4px;         /* Sharper, more professional boutique edges */
+  
+  /* Layout */
+  --header-height: 70px;
+  --bottom-nav-height: 65px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background-color: var(--background);
+  color: var(--text-main);
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Playfair Display', serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.boutique-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lux);
+  border-radius: var(--radius-pro);
+  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.boutique-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(123, 17, 19, 0.12);
+}
+
+.btn-luxury {
+  background: var(--primary);
+  color: #fff;
+  padding: 14px 28px;
+  border: none;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-luxury:hover {
+  background: var(--primary-light);
+  transform: scale(1.02);
+}
+
+.section-title {
+  text-align: center;
+  margin-bottom: 4rem;
+}
+
+.section-title h2 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--primary);
+}
+
+.section-title .divider {
+  width: 60px;
+  height: 3px;
+  background: var(--secondary);
+  margin: 0 auto;
+}
+
+/* Shahi Vastra Utility */
+.trust-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+
+/* ================================================
+   Ladli — Additions to src/styles/global.css
+   Paste these at the END of your existing global.css
+   ================================================ */
+
+/* --- Toast slide-in animation --- */
+@keyframes slide-in {
+  from { transform: translateX(110%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+.animate-slide-in {
+  animation: slide-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* --- Skeleton shimmer (loading cards) --- */
+@keyframes shimmer {
+  0%   { background-position: -800px 0; }
+  100% { background-position:  800px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #f0ebe3 25%, #fdf8f2 50%, #f0ebe3 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: var(--radius-pro);
+}
+
+/* --- Smooth scrollbar --- */
+html { scroll-behavior: smooth; }
+
+/* --- Focus ring override (accessibility) --- */
+*:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* --- Utility classes --- */
+.text-primary-hover { color: var(--primary-light); }
+.bg-primary-hover   { background-color: var(--primary-light); }
+
+.shadow-pro {
+  box-shadow: 0 8px 30px rgba(123, 17, 19, 0.10),
+              0 2px 8px  rgba(0, 0, 0, 0.06);
+}
+
+/* --- Hide scrollbar (bottom nav, thumbnails) --- */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* --- Product card hover fix --- */
+.bg-bg-card    { background-color: var(--surface); }
+.bg-bg-main    { background-color: var(--background); }
+.text-text-main { color: var(--text-main); }
+.text-text-muted { color: var(--text-muted); }
+.border-border-color { border-color: var(--border); }
