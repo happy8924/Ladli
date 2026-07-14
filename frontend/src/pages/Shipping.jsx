@@ -34,7 +34,7 @@ const Shipping = () => {
 
         {/* Header */}
         <div className="text-center mb-10">
-          <h1 className="text-4xl font-black font-serif text-text-main mb-3">Shipping & Returns</h1>
+          <h1 className="text-4xl font-black font-serif text-text-main mb-3">Shipping & Returns Cholis</h1>
           <p className="text-text-muted">Everything you need to know about getting your order delivered safely.</p>
         </div>
 
