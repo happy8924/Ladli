@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta
 from app.db.database import get_db
-from app.models import models
+from app.models import User
 from app.schemas import schemas
 from app.core import auth
 
@@ -22,7 +22,7 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     user_count = db.query(models.User).count()
     role = "admin" if user_count == 0 else "user"
     
-    new_user = models.User(
+    new_user = User(
         username=user.username,
         email=user.email,
         hashed_password=hashed_password,
@@ -35,7 +35,7 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=schemas.Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.username == form_data.username).first()
+    user = db.query(User).filter(User.username == form_data.username).first()
     if not user or not auth.verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
