@@ -1,4 +1,5 @@
-from pydantic import BaseSettings, Field
+from pydantic_settings import BaseSettings
+from pydantic import Field
 
 class Settings(BaseSettings):
     # Database URL – defaults to SQLite for local dev; can be overridden via .env
@@ -11,7 +12,7 @@ class Settings(BaseSettings):
     cors_origins: str = Field(default="http://localhost:5173,http://127.0.0.1:5173", env="CORS_ORIGINS")
 
     class Config:
-        env_file = ".env"
+        extra = "allow"
         env_file_encoding = "utf-8"
 
 settings = Settings()
