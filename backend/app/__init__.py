@@ -5,7 +5,7 @@ import os
 
 from .config.settings import settings
 from .db.database import engine, Base
-from .models import models  # noqa: F401  # ensure tables are registered
+from .models import User, Category, Product, Order, OrderItem, Wishlist, Review, SiteVisit, OrderStatus  # noqa: F401  # ensure tables are registered
 
 # Import routers
 from .api.endpoints import auth, products, categories, orders, users, admin, wishlist, reviews, payments, tracking

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 import os
 from app.db.database import get_db
 from app.models import User
-from app.schemas import schemas
+from app.schemas.schemas import TokenData
 
 # Load config from env
 SECRET_KEY = os.getenv("SECRET_KEY", "secret")
@@ -45,17 +45,17 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
-        token_data = schemas.TokenData(username=username)
+        token_data = TokenData(username=username)
     except JWTError:
         raise credentials_exception
 
-    user = db.query(models.User).filter(models.User.username == token_data.username).first()
+    user = db.query(User).filter(User.username == token_data.username).first()
     if user is None:
         raise credentials_exception
     return user
 
 # ✅ Yeh function products.py, admin.py, etc. ko chahiye
-async def get_current_admin(current_user: models.User = Depends(get_current_user)):
+async def get_current_admin(current_user: User = Depends(get_current_user)):
     if current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -64,7 +64,7 @@ async def get_current_admin(current_user: models.User = Depends(get_current_user
     return current_user
 
 # ✅ Bonus: agar kahin logistics role check bhi chahiye ho
-async def get_current_admin_or_logistics(current_user: models.User = Depends(get_current_user)):
+async def get_current_admin_or_logistics(current_user: User = Depends(get_current_user)):
     if current_user.role not in ("admin", "logistics"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

@@ -72,6 +72,7 @@ class ProductOut(ProductBase):
     id: int
     created_at: datetime
     category: Optional[CategoryOut] = None
+    image_urls: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 # Wishlist Schemas

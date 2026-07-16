@@ -11,8 +11,8 @@ import os
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from app.db.database import DATABASE_URL
-from app.models.models import Base
+from app.db.database import DATABASE_URL, Base
+import app.models.models  # noqa: F401 — registers all ORM models in Base.metadata
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
