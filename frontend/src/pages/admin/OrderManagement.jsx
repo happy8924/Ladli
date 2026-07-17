@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import api from '../../api/api';
 import {
   Search, Filter, Edit, Package, Truck,
-  CheckCircle, XCircle, Clock, X
+  CheckCircle, XCircle, Clock, X, RefreshCw, AlertTriangle
 } from 'lucide-react';
+
+// Auto-refetch orders every 30s so newly placed orders show up without
+// the admin needing to know to reload the page.
+const AUTO_REFRESH_MS = 30000;
 
 const ORDER_STATUSES = [
   { value: 'pending',    label: 'Pending',    icon: Clock,       cls: 'bg-yellow-900/30 text-yellow-400 border-yellow-700/40' },
@@ -25,20 +29,30 @@ const OrderManagement = () => {
   const [showModal, setShowModal]     = useState(false);
   const [statusUpdate, setStatusUpdate] = useState({ status: '', tracking_id: '', estimated_delivery: '' });
   const [saving, setSaving]           = useState(false);
+  const [refreshing, setRefreshing]   = useState(false);
+  const [error, setError]             = useState('');
 
-  useEffect(() => { fetchOrders(); }, []);
-
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async (isBackground = false) => {
+    if (isBackground) setRefreshing(true);
     try {
       // ✅ matches backend route: GET /orders/all (admin/logistics only)
       const res = await api.get('/orders/all');
       setOrders(res.data);
+      setError('');
     } catch (e) {
       console.error('Failed to fetch orders:', e);
+      setError(e.response?.data?.detail || 'Orders load nahi ho paye. Connection ya login check karo.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchOrders();
+    const interval = setInterval(() => fetchOrders(true), AUTO_REFRESH_MS);
+    return () => clearInterval(interval);
+  }, [fetchOrders]);
 
   const openStatusModal = (order) => {
     setSelectedOrder(order);
@@ -94,10 +108,29 @@ const OrderManagement = () => {
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
 
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl md:text-4xl font-black font-serif text-text-main mb-1">Order Management</h1>
-        <p className="text-text-muted">Track orders, update status, and manage shipping.</p>
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-black font-serif text-text-main mb-1">Order Management</h1>
+          <p className="text-text-muted">Track orders, update status, and manage shipping.</p>
+        </div>
+        <button
+          onClick={() => fetchOrders(true)}
+          disabled={refreshing}
+          title="Refresh orders"
+          className="flex items-center gap-2 bg-white/5 border border-border-color text-text-main px-4 py-3 rounded-xl font-bold text-sm hover:bg-white/10 transition-colors disabled:opacity-60 shrink-0"
+        >
+          <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+          {refreshing ? 'Refreshing…' : 'Refresh'}
+        </button>
       </div>
+
+      {/* Error banner */}
+      {error && (
+        <div className="flex items-start gap-3 bg-red-900/20 border border-red-700/40 text-red-300 rounded-xl p-4 mb-6">
+          <AlertTriangle size={18} className="mt-0.5 shrink-0" />
+          <p className="text-sm">{error}</p>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">

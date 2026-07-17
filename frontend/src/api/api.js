@@ -1,8 +1,10 @@
 import axios from 'axios';
 
 // Backend Base URL
+// Reads from .env (VITE_API_URL) so this actually changes per environment
+// (local dev vs production) instead of always pointing at localhost.
 const API_URL =
-  'http://127.0.0.1:8000/api';
+  import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
 
 // Create Axios Instance
 const api = axios.create({

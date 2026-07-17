@@ -9,10 +9,13 @@ import os
 from app.db.database import get_db
 from app.models import User
 from app.schemas.schemas import TokenData
+from app.config.settings import settings
 
-# Load config from env
-SECRET_KEY = os.getenv("SECRET_KEY", "secret")
-ALGORITHM = os.getenv("ALGORITHM", "HS256")
+# Load config — SECRET_KEY/ALGORITHM come from Settings (backed by .env),
+# so there's one source of truth instead of two separate env lookups
+# that could silently drift out of sync.
+SECRET_KEY = settings.jwt_secret_key
+ALGORITHM = settings.jwt_algorithm
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

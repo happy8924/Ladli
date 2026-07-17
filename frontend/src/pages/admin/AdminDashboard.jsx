@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../api/api';
 import {
   Users, ShoppingBag, DollarSign, Package, TrendingUp,
-  Eye, Plus, Footprints, BarChart3
+  Eye, Plus, Footprints, BarChart3, RefreshCw, AlertTriangle
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
@@ -22,6 +22,10 @@ const STATUS_COLORS = {
 
 const PIE_COLORS = ['#6B46C1', '#EC4899', '#F59E0B', '#10B981', '#3B82F6'];
 
+// Dashboard silently refetches every 30s so new orders show up without
+// the admin having to know to hit reload.
+const AUTO_REFRESH_MS = 30000;
+
 const AdminDashboard = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState({ total_sales: 0, order_count: 0, product_count: 0, user_count: 0 });
@@ -30,25 +34,60 @@ const AdminDashboard = () => {
   });
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [errors, setErrors] = useState([]); // which parts failed to load, shown to the admin instead of hidden
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const isFirstLoad = useRef(true);
 
-  useEffect(() => { fetchDashboardData(); }, []);
+  const fetchDashboardData = useCallback(async () => {
+    if (isFirstLoad.current) setLoading(true);
+    else setRefreshing(true);
 
-  const fetchDashboardData = async () => {
-    try {
-      const [statsRes, ordersRes, analyticsRes] = await Promise.all([
-        api.get('/admin/stats'),
-        api.get('/orders/all'),
-        api.get('/admin/analytics'),
-      ]);
-      setStats(statsRes.data);
-      setRecentOrders(ordersRes.data.slice(0, 5));
-      setAnalytics(analyticsRes.data);
-    } catch (e) {
-      console.error('Failed to fetch dashboard data:', e);
-    } finally {
-      setLoading(false);
+    // Promise.allSettled instead of Promise.all: one endpoint failing
+    // (auth hiccup, network blip, etc.) no longer blanks the whole
+    // dashboard silently — each section loads independently and we
+    // surface exactly what failed.
+    const [statsRes, ordersRes, analyticsRes] = await Promise.allSettled([
+      api.get('/admin/stats'),
+      api.get('/orders/all'),
+      api.get('/admin/analytics'),
+    ]);
+
+    const newErrors = [];
+
+    if (statsRes.status === 'fulfilled') {
+      setStats(statsRes.value.data);
+    } else {
+      newErrors.push('Stats load nahi hue');
+      console.error('Failed to fetch admin stats:', statsRes.reason);
     }
-  };
+
+    if (ordersRes.status === 'fulfilled') {
+      setRecentOrders(ordersRes.value.data.slice(0, 5));
+    } else {
+      newErrors.push('Orders load nahi hue');
+      console.error('Failed to fetch orders:', ordersRes.reason);
+    }
+
+    if (analyticsRes.status === 'fulfilled') {
+      setAnalytics(analyticsRes.value.data);
+    } else {
+      newErrors.push('Analytics load nahi hue');
+      console.error('Failed to fetch analytics:', analyticsRes.reason);
+    }
+
+    setErrors(newErrors);
+    setLastUpdated(new Date());
+    setLoading(false);
+    setRefreshing(false);
+    isFirstLoad.current = false;
+  }, []);
+
+  useEffect(() => {
+    fetchDashboardData();
+    const interval = setInterval(fetchDashboardData, AUTO_REFRESH_MS);
+    return () => clearInterval(interval);
+  }, [fetchDashboardData]);
 
   const formatPrice = (price) => `₹${Number(price || 0).toLocaleString('en-IN')}`;
   const formatDate  = (d) => new Date(d).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
@@ -81,18 +120,47 @@ const AdminDashboard = () => {
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
         <div>
           <h1 className="text-3xl md:text-4xl font-black font-serif text-text-main mb-1">Admin Dashboard</h1>
           <p className="text-text-muted">Welcome back, {user?.username}! Here's your store overview.</p>
         </div>
-        <Link
-          to="/admin/products/new"
-          className="flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-xl font-bold text-sm hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20 shrink-0"
-        >
-          <Plus size={18} /> Add Product
-        </Link>
+        <div className="flex items-center gap-3 shrink-0">
+          <button
+            onClick={fetchDashboardData}
+            disabled={refreshing}
+            title="Refresh dashboard data"
+            className="flex items-center gap-2 bg-white/5 border border-border-color text-text-main px-4 py-3 rounded-xl font-bold text-sm hover:bg-white/10 transition-colors disabled:opacity-60"
+          >
+            <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+            {refreshing ? 'Refreshing…' : 'Refresh'}
+          </button>
+          <Link
+            to="/admin/products/new"
+            className="flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-xl font-bold text-sm hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20"
+          >
+            <Plus size={18} /> Add Product
+          </Link>
+        </div>
       </div>
+
+      {/* Last updated + auto-refresh note */}
+      {lastUpdated && (
+        <p className="text-text-muted text-xs mb-4">
+          Last updated: {lastUpdated.toLocaleTimeString('en-IN')} · Auto-refreshes every 30s
+        </p>
+      )}
+
+      {/* Error banner — shown instead of silently blanking the dashboard */}
+      {errors.length > 0 && (
+        <div className="flex items-start gap-3 bg-red-900/20 border border-red-700/40 text-red-300 rounded-xl p-4 mb-6">
+          <AlertTriangle size={18} className="mt-0.5 shrink-0" />
+          <div className="text-sm">
+            <p className="font-bold mb-1">Kuch data load nahi ho paya:</p>
+            <p>{errors.join(', ')}. Backend connection ya login check karke "Refresh" try karo. (Details browser console mein hain.)</p>
+          </div>
+        </div>
+      )}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
