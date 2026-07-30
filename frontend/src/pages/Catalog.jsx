@@ -14,7 +14,6 @@ const CATEGORIES = [
   { value: '',         label: 'All Collections', emoji: '✨' },
   { value: 'bridal',   label: 'Bridal Edit',      emoji: '👰' },
   { value: 'navratri', label: 'Navratri Special',  emoji: '🪔' },
-  { value: 'party',    label: 'Party Wear',        emoji: '🎉' },
   { value: 'new',      label: 'New Arrivals',       emoji: '🆕' },
 ];
 
@@ -39,8 +38,10 @@ const CatalogCard = ({ product, view }) => {
   const { addToCart }                   = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const [hovered, setHovered]           = useState(false);
-  const rating  = (Math.random() * 1.5 + 3.5).toFixed(1);
-  const reviews = Math.floor(Math.random() * 400) + 20;
+  
+  // Deterministic rating and review count based on product ID to prevent flicker
+  const rating  = (((product.id * 17) % 15) / 10 + 3.5).toFixed(1);
+  const reviews = ((product.id * 37) % 350) + 25;
   const discount = Math.round((1 - 1 / 1.4) * 100);
 
   if (view === 'list') {

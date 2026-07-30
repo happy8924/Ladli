@@ -41,6 +41,11 @@ const Navbar = () => {
     return false;
   };
 
+  // Do not render storefront Navbar on Admin routes
+  if (location.pathname.startsWith('/admin')) {
+    return null;
+  }
+
   return (
     <header className={`sticky top-0 z-50 transition-all duration-300 border-b border-border-color ${
       scrolled ? 'bg-bg-card/95 backdrop-blur-md shadow-sm' : 'bg-bg-card'

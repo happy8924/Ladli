@@ -1,8 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;600;700;800&display=swap');
 
 /* =============================================
    ROYAL HERITAGE THEME -- Cream / Maroon / Gold
@@ -54,23 +54,8 @@
     font-family: 'Playfair Display', serif;
   }
 
-  .bg-white         { background-color: #FFFFFF !important; }
-  .bg-cream         { background-color: var(--bg-main) !important; }
-  .bg-slate-50      { background-color: #FBF6EC !important; }
-  .bg-slate-100     { background-color: #F3ECDD !important; }
-  .bg-slate-800     { background-color: #EFE6D3 !important; }
-  .bg-slate-900     { background-color: #2B1114 !important; }
-  .bg-slate-950     { background-color: #21100F !important; }
-
-  .text-slate-300   { color: var(--text-muted) !important; }
-  .text-slate-400   { color: var(--text-muted) !important; }
-  .text-slate-500   { color: var(--text-muted) !important; }
-  .text-slate-800   { color: var(--text-main) !important; }
-  .text-slate-900   { color: var(--text-main) !important; }
-
-  .border-slate-200 { border-color: var(--border-color) !important; }
-  .border-slate-800 { border-color: var(--border-color) !important; }
-  .border-slate-900 { border-color: var(--border-color) !important; }
+  .bg-cream         { background-color: var(--bg-main); }
+  .bg-slate-50-custom { background-color: #FBF6EC; }
 }
 
 @layer components {
@@ -127,24 +112,37 @@
     border-color: var(--secondary);
   }
 
-  input, textarea, select {
-    background-color: #FFFFFF !important;
-    color: var(--text-main) !important;
-    border-color: var(--border-color) !important;
+  /* Dedicated Admin Theme Utility Overrides */
+  .dark input, 
+  .dark textarea, 
+  .dark select {
+    background-color: #1E293B !important;
+    color: #FFFFFF !important;
+    border-color: #475569 !important;
   }
-  input::placeholder, textarea::placeholder {
-    color: #B3A38F !important;
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: #94A3B8 !important;
   }
-  input:focus, textarea:focus, select:focus {
-    border-color: var(--secondary) !important;
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.25);
+
+  .dark input:focus,
+  .dark textarea:focus,
+  .dark select:focus {
+    border-color: #F59E0B !important;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25) !important;
+    outline: none !important;
+  }
+
+  .dark select option {
+    background-color: #1E293B !important;
+    color: #FFFFFF !important;
   }
 
   .order-summary {
-    background: #FFFFFF !important;
-    border-color: var(--border-color) !important;
-    color: var(--text-main) !important;
+    background: #FFFFFF;
+    border-color: var(--border-color);
+    color: var(--text-main);
   }
 }
 

@@ -1,81 +1,106 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const CartContext = createContext();
 
-export const CartProvider = ({ children }) => {
+const CART_STORAGE_KEY = 'ladli_cart';
 
-    const [cartItems, setCartItems] = useState([]);
+export const CartProvider = ({ children }) => {
+    const [cartItems, setCartItems] = useState(() => {
+        try {
+            const saved = localStorage.getItem(CART_STORAGE_KEY);
+            return saved ? JSON.parse(saved) : [];
+        } catch (e) {
+            console.error('Failed to load cart from localStorage:', e);
+            return [];
+        }
+    });
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
+        } catch (e) {
+            console.error('Failed to save cart to localStorage:', e);
+        }
+    }, [cartItems]);
 
     // ADD TO CART
-    const addToCart = (product) => {
+    const addToCart = (product, selectedSize = 'M', quantity = 1) => {
+        const itemKey = `${product.id}-${selectedSize}`;
 
-        const existingItem = cartItems.find(
-            item => item.id === product.id
+        const existingIndex = cartItems.findIndex(
+            item => item.cartItemId === itemKey || (item.id === product.id && item.selectedSize === selectedSize)
         );
 
-        if (existingItem) {
-
+        if (existingIndex > -1) {
             setCartItems(
-                cartItems.map(item =>
-                    item.id === product.id
+                cartItems.map((item, idx) =>
+                    idx === existingIndex
                         ? {
                             ...item,
-                            quantity: item.quantity + 1
+                            quantity: item.quantity + (quantity || 1)
                         }
                         : item
                 )
             );
-
         } else {
-
             setCartItems([
                 ...cartItems,
                 {
                     ...product,
-                    quantity: 1
+                    cartItemId: itemKey,
+                    selectedSize: selectedSize || 'M',
+                    quantity: quantity || 1
                 }
             ]);
         }
     };
 
     // INCREASE
-    const increaseQuantity = (id) => {
-
+    const increaseQuantity = (id, selectedSize) => {
         setCartItems(
-            cartItems.map(item =>
-                item.id === id
-                    ? {
-                        ...item,
-                        quantity: item.quantity + 1
-                    }
-                    : item
-            )
+            cartItems.map(item => {
+                const match = selectedSize
+                    ? (item.id === id && item.selectedSize === selectedSize) || item.cartItemId === `${id}-${selectedSize}`
+                    : item.id === id || item.cartItemId === id;
+                return match ? { ...item, quantity: item.quantity + 1 } : item;
+            })
         );
     };
 
     // DECREASE
-    const decreaseQuantity = (id) => {
-
+    const decreaseQuantity = (id, selectedSize) => {
         setCartItems(
             cartItems
-                .map(item =>
-                    item.id === id
-                        ? {
-                            ...item,
-                            quantity: item.quantity - 1
-                        }
-                        : item
-                )
+                .map(item => {
+                    const match = selectedSize
+                        ? (item.id === id && item.selectedSize === selectedSize) || item.cartItemId === `${id}-${selectedSize}`
+                        : item.id === id || item.cartItemId === id;
+                    return match ? { ...item, quantity: item.quantity - 1 } : item;
+                })
                 .filter(item => item.quantity > 0)
         );
     };
 
     // REMOVE
-    const removeFromCart = (id) => {
-
+    const removeFromCart = (id, selectedSize) => {
         setCartItems(
-            cartItems.filter(item => item.id !== id)
+            cartItems.filter(item => {
+                if (selectedSize) {
+                    return !((item.id === id && item.selectedSize === selectedSize) || item.cartItemId === `${id}-${selectedSize}`);
+                }
+                return item.id !== id && item.cartItemId !== id;
+            })
         );
+    };
+
+    // CLEAR CART
+    const clearCart = () => {
+        setCartItems([]);
+        try {
+            localStorage.removeItem(CART_STORAGE_KEY);
+        } catch (e) {
+            console.error('Failed to clear cart storage:', e);
+        }
     };
 
     // TOTAL ITEMS
@@ -86,8 +111,7 @@ export const CartProvider = ({ children }) => {
 
     // TOTAL PRICE
     const totalPrice = cartItems.reduce(
-        (total, item) =>
-            total + item.price * item.quantity,
+        (total, item) => total + item.price * item.quantity,
         0
     );
 
@@ -99,6 +123,7 @@ export const CartProvider = ({ children }) => {
                 removeFromCart,
                 increaseQuantity,
                 decreaseQuantity,
+                clearCart,
                 totalItems,
                 totalPrice
             }}

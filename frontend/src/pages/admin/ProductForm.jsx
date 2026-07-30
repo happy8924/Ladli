@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft, Save, Image as ImageIcon, AlertCircle,
-  CheckCircle, Package, Tag, DollarSign, Layers,
-  Plus, Upload, Loader2, X
+  CheckCircle, Package, DollarSign, Layers,
+  Plus, Upload, Loader2, X, Sparkles
 } from 'lucide-react';
 import api from '../../api/api';
 
@@ -19,7 +19,7 @@ const EMPTY_FORM = {
 };
 
 const ProductForm = () => {
-  const { id } = useParams();          // present only on edit route
+  const { id } = useParams();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
 
@@ -30,18 +30,17 @@ const ProductForm = () => {
   const [error, setError]         = useState('');
   const [success, setSuccess]     = useState(false);
 
-  /* ── Inline "add new category" ── */
+  /* Inline add new category */
   const [addingCategory, setAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [categorySaving, setCategorySaving] = useState(false);
   const [categoryError, setCategoryError] = useState('');
 
-  /* ── Image upload ── */
+  /* Image upload */
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
 
-  /* ── Fetch categories ── */
   const fetchCategories = () => {
     api.get('/categories/')
       .then(res => setCategories(res.data))
@@ -50,7 +49,6 @@ const ProductForm = () => {
 
   useEffect(() => { fetchCategories(); }, []);
 
-  /* ── Create a new category inline ── */
   const handleAddCategory = async () => {
     const name = newCategoryName.trim();
     if (!name) return;
@@ -63,17 +61,12 @@ const ProductForm = () => {
       setNewCategoryName('');
       setAddingCategory(false);
     } catch (err) {
-      setCategoryError(
-        err.code === 'ECONNABORTED' || !err.response
-          ? 'Could not reach the server. Is the backend running?'
-          : (err.response?.data?.detail || 'Could not add category.')
-      );
+      setCategoryError(err.response?.data?.detail || 'Could not add category.');
     } finally {
       setCategorySaving(false);
     }
   };
 
-  /* ── Upload an image from device (gallery/camera roll) ── */
   const handleImageFile = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -84,24 +77,17 @@ const ProductForm = () => {
       fd.append('file', file);
       const res = await api.post('/products/upload-image', fd, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 30000, // uploads can take longer than regular API calls
+        timeout: 30000,
       });
       setForm(f => ({ ...f, image_url: res.data.url }));
     } catch (err) {
-      if (err.code === 'ECONNABORTED') {
-        setUploadError('Upload timed out — check that the backend server is running.');
-      } else if (!err.response) {
-        setUploadError('Could not reach the server. Is the backend running?');
-      } else {
-        setUploadError(err.response?.data?.detail || 'Upload failed. Please try again.');
-      }
+      setUploadError(err.response?.data?.detail || 'Upload failed. Please try again.');
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  /* ── Fetch product if editing ── */
   useEffect(() => {
     if (!isEdit) return;
     api.get(`/products/${id}`)
@@ -165,57 +151,58 @@ const ProductForm = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary" />
+      <div className="flex flex-col items-center justify-center h-96 gap-3">
+        <div className="w-12 h-12 rounded-full border-4 border-rose-900 border-t-amber-400 animate-spin" />
+        <p className="text-slate-400 font-bold text-sm">Loading Product Form...</p>
       </div>
     );
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto space-y-6">
 
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-8">
+      {/* Top Header */}
+      <div className="flex items-center gap-4 bg-[#0F172A] border border-slate-700/60 shadow-2xl rounded-3xl p-6 shadow-xl">
         <Link
           to="/admin/products"
-          className="w-10 h-10 rounded-xl bg-bg-card border border-border-color flex items-center justify-center text-text-muted hover:text-text-main hover:border-primary/40 transition-all shrink-0"
+          className="w-10 h-10 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 hover:text-white hover:border-rose-700 transition-all shrink-0"
         >
           <ArrowLeft size={18} />
         </Link>
         <div>
-          <h1 className="text-2xl md:text-3xl font-black font-serif text-text-main">
-            {isEdit ? 'Edit Product' : 'Add New Product'}
+          <h1 className="text-2xl md:text-3xl font-black font-serif text-white flex items-center gap-2">
+            {isEdit ? 'Edit Catalog Item' : 'New Product Entry'} <Sparkles size={20} className="text-amber-400" />
           </h1>
-          <p className="text-text-muted text-sm">
-            {isEdit ? 'Update product details below' : 'Fill in the details to add a new product'}
+          <p className="text-slate-400 text-xs mt-0.5">
+            {isEdit ? 'Update details for this product in the catalog.' : 'Fill in product information to publish to store.'}
           </p>
         </div>
       </div>
 
-      {/* Alerts */}
       {error && (
-        <div className="flex items-center gap-2 bg-red-900/30 border border-red-700/40 text-red-400 px-4 py-3 rounded-xl mb-6 text-sm font-medium">
-          <AlertCircle size={16} className="shrink-0" /> {error}
+        <div className="flex items-center gap-2 bg-rose-950/40 border border-rose-900/60 text-rose-300 px-4 py-3 rounded-2xl text-xs font-medium">
+          <AlertCircle size={16} className="shrink-0 text-rose-400" /> {error}
         </div>
       )}
+
       {success && (
-        <div className="flex items-center gap-2 bg-green-900/30 border border-green-700/40 text-green-400 px-4 py-3 rounded-xl mb-6 text-sm font-medium">
-          <CheckCircle size={16} className="shrink-0" /> Product {isEdit ? 'updated' : 'created'} successfully! Redirecting…
+        <div className="flex items-center gap-2 bg-emerald-950/40 border border-emerald-900/60 text-emerald-300 px-4 py-3 rounded-2xl text-xs font-medium">
+          <CheckCircle size={16} className="shrink-0 text-emerald-400" /> Product {isEdit ? 'updated' : 'created'} successfully! Redirecting…
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
 
-        {/* ── Basic Info ── */}
-        <div className="bg-bg-card border border-border-color rounded-2xl p-6">
-          <h2 className="font-bold text-text-main text-sm uppercase tracking-wider mb-5 flex items-center gap-2">
-            <Package size={16} className="text-primary" /> Basic Information
+        {/* Basic Info */}
+        <div className="bg-[#0F172A] border border-slate-700/60 shadow-2xl rounded-3xl p-6 shadow-xl space-y-4">
+          <h2 className="font-serif font-black text-white text-base flex items-center gap-2 border-b border-slate-800 pb-3">
+            <Package size={18} className="text-rose-500" /> Basic Details
           </h2>
 
-          <div className="flex flex-col gap-4">
+          <div className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-2">
-                Product Name *
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                Product Title *
               </label>
               <input
                 type="text"
@@ -224,27 +211,27 @@ const ProductForm = () => {
                 onChange={handleChange}
                 placeholder="e.g. Royal Embroidered Chaniya Choli"
                 required
-                className="w-full px-4 py-3 bg-bg-main border border-border-color rounded-xl text-text-main text-sm placeholder:text-text-muted/50 focus:border-primary focus:ring-1 focus:ring-primary/30 outline-none transition-all"
+                className="w-full px-4 py-3 bg-[#1E293B] border border-slate-600 rounded-2xl text-white text-xs placeholder:text-slate-600 focus:border-rose-700 outline-none transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-2">
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                 Description
               </label>
               <textarea
                 name="description"
                 value={form.description}
                 onChange={handleChange}
-                rows={4}
-                placeholder="Describe the product — fabric, work, occasion, etc."
-                className="w-full px-4 py-3 bg-bg-main border border-border-color rounded-xl text-text-main text-sm placeholder:text-text-muted/50 focus:border-primary focus:ring-1 focus:ring-primary/30 outline-none transition-all resize-none"
+                rows={3}
+                placeholder="Describe fabric texture, embroidery details, fit guidelines..."
+                className="w-full px-4 py-3 bg-[#1E293B] border border-slate-600 rounded-2xl text-white text-xs placeholder:text-slate-600 focus:border-rose-700 outline-none transition-colors resize-none"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-2">
+                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                   Category *
                 </label>
                 <select
@@ -252,9 +239,9 @@ const ProductForm = () => {
                   value={form.category_id}
                   onChange={handleChange}
                   required={!addingCategory}
-                  className="w-full px-4 py-3 bg-bg-main border border-border-color rounded-xl text-text-main text-sm focus:border-primary focus:ring-1 focus:ring-primary/30 outline-none transition-all"
+                  className="w-full px-4 py-3 bg-[#1E293B] border border-slate-600 rounded-2xl text-white text-xs focus:border-rose-700 outline-none cursor-pointer"
                 >
-                  <option value="">Select category</option>
+                  <option value="">Select Category</option>
                   {categories.map(cat => (
                     <option key={cat.id} value={cat.id}>{cat.name}</option>
                   ))}
@@ -264,70 +251,68 @@ const ProductForm = () => {
                   <button
                     type="button"
                     onClick={() => setAddingCategory(true)}
-                    className="mt-2 inline-flex items-center gap-1.5 text-primary text-xs font-bold hover:underline"
+                    className="mt-2 inline-flex items-center gap-1 text-amber-400 text-xs font-bold hover:underline"
                   >
-                    <Plus size={14} /> Add new category
+                    <Plus size={14} /> Add new category inline
                   </button>
                 ) : (
-                  <div className="mt-2 flex flex-col gap-2">
+                  <div className="mt-2 space-y-2">
                     <div className="flex gap-2">
                       <input
                         type="text"
                         value={newCategoryName}
                         onChange={e => setNewCategoryName(e.target.value)}
-                        placeholder="e.g. Navratri"
-                        autoFocus
-                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddCategory(); } }}
-                        className="flex-1 px-3 py-2 bg-bg-main border border-border-color rounded-lg text-text-main text-sm placeholder:text-text-muted/50 focus:border-primary focus:ring-1 focus:ring-primary/30 outline-none transition-all"
+                        placeholder="e.g. Designer Sarees"
+                        className="flex-1 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs focus:border-rose-700 outline-none"
                       />
                       <button
                         type="button"
                         onClick={handleAddCategory}
                         disabled={categorySaving || !newCategoryName.trim()}
-                        className="px-4 py-2 bg-primary text-white rounded-lg text-xs font-bold hover:bg-primary-hover transition-colors disabled:opacity-50 shrink-0"
+                        className="px-3 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold hover:bg-amber-500 transition-colors disabled:opacity-50"
                       >
-                        {categorySaving ? 'Adding…' : 'Add'}
+                        {categorySaving ? 'Saving…' : 'Add'}
                       </button>
                       <button
                         type="button"
                         onClick={() => { setAddingCategory(false); setNewCategoryName(''); setCategoryError(''); }}
-                        className="w-9 h-9 flex items-center justify-center rounded-lg border border-border-color text-text-muted hover:bg-white/5 transition-colors shrink-0"
+                        className="p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white"
                       >
                         <X size={14} />
                       </button>
                     </div>
-                    {categoryError && <p className="text-red-400 text-xs">{categoryError}</p>}
+                    {categoryError && <p className="text-rose-400 text-[11px]">{categoryError}</p>}
                   </div>
                 )}
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-2">
-                  Fabric
+                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                  Fabric Type
                 </label>
                 <input
                   type="text"
                   name="fabric"
                   value={form.fabric}
                   onChange={handleChange}
-                  placeholder="e.g. Pure Silk, Georgette"
-                  className="w-full px-4 py-3 bg-bg-main border border-border-color rounded-xl text-text-main text-sm placeholder:text-text-muted/50 focus:border-primary focus:ring-1 focus:ring-primary/30 outline-none transition-all"
+                  placeholder="e.g. Georgette, Chanderi Silk"
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-2xl text-white text-xs placeholder:text-slate-600 focus:border-rose-700 outline-none transition-colors"
                 />
               </div>
             </div>
           </div>
         </div>
 
-        {/* ── Pricing & Stock ── */}
-        <div className="bg-bg-card border border-border-color rounded-2xl p-6">
-          <h2 className="font-bold text-text-main text-sm uppercase tracking-wider mb-5 flex items-center gap-2">
-            <DollarSign size={16} className="text-primary" /> Pricing & Inventory
+        {/* Pricing & Stock */}
+        <div className="bg-[#0F172A] border border-slate-700/60 shadow-2xl rounded-3xl p-6 shadow-xl space-y-4">
+          <h2 className="font-serif font-black text-white text-base flex items-center gap-2 border-b border-slate-800 pb-3">
+            <DollarSign size={18} className="text-amber-400" /> Pricing &amp; Stock Inventory
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-2">
-                Price (₹) *
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                Retail Price (₹) *
               </label>
               <input
                 type="number"
@@ -338,13 +323,13 @@ const ProductForm = () => {
                 step="0.01"
                 placeholder="2999"
                 required
-                className="w-full px-4 py-3 bg-bg-main border border-border-color rounded-xl text-text-main text-sm placeholder:text-text-muted/50 focus:border-primary focus:ring-1 focus:ring-primary/30 outline-none transition-all"
+                className="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-2xl text-white text-xs placeholder:text-slate-600 focus:border-rose-700 outline-none transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-2">
-                Stock Quantity *
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                Available Stock *
               </label>
               <input
                 type="number"
@@ -354,21 +339,21 @@ const ProductForm = () => {
                 min="0"
                 placeholder="25"
                 required
-                className="w-full px-4 py-3 bg-bg-main border border-border-color rounded-xl text-text-main text-sm placeholder:text-text-muted/50 focus:border-primary focus:ring-1 focus:ring-primary/30 outline-none transition-all"
+                className="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-2xl text-white text-xs placeholder:text-slate-600 focus:border-rose-700 outline-none transition-colors"
               />
             </div>
           </div>
         </div>
 
-        {/* ── Sizes & Image ── */}
-        <div className="bg-bg-card border border-border-color rounded-2xl p-6">
-          <h2 className="font-bold text-text-main text-sm uppercase tracking-wider mb-5 flex items-center gap-2">
-            <Layers size={16} className="text-primary" /> Variants & Media
+        {/* Sizes & Image Upload */}
+        <div className="bg-[#0F172A] border border-slate-700/60 shadow-2xl rounded-3xl p-6 shadow-xl space-y-4">
+          <h2 className="font-serif font-black text-white text-base flex items-center gap-2 border-b border-slate-800 pb-3">
+            <Layers size={18} className="text-emerald-400" /> Variants &amp; Media
           </h2>
 
-          <div className="flex flex-col gap-4">
+          <div className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-2">
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                 Available Sizes (comma separated)
               </label>
               <input
@@ -377,48 +362,36 @@ const ProductForm = () => {
                 value={form.sizes}
                 onChange={handleChange}
                 placeholder="S,M,L,XL,2XL"
-                className="w-full px-4 py-3 bg-bg-main border border-border-color rounded-xl text-text-main text-sm placeholder:text-text-muted/50 focus:border-primary focus:ring-1 focus:ring-primary/30 outline-none transition-all"
+                className="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-2xl text-white text-xs placeholder:text-slate-600 focus:border-rose-700 outline-none transition-colors"
               />
-              <div className="flex gap-1.5 mt-2 flex-wrap">
-                {form.sizes.split(',').map(s => s.trim()).filter(Boolean).map(s => (
-                  <span key={s} className="px-2.5 py-1 bg-primary/10 text-primary text-xs font-bold rounded-lg border border-primary/20">{s}</span>
-                ))}
-              </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-2">
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                 Product Image
               </label>
-
               <div className="flex flex-col sm:flex-row gap-4">
-                {/* Preview / upload dropzone */}
                 <div
                   onClick={() => !uploading && fileInputRef.current?.click()}
-                  className="w-32 aspect-[3/4] rounded-xl overflow-hidden border-2 border-dashed border-border-color bg-bg-main flex items-center justify-center shrink-0 cursor-pointer hover:border-primary/50 transition-colors relative"
+                  className="w-28 aspect-[3/4] rounded-2xl border-2 border-dashed border-slate-800 bg-slate-900 flex items-center justify-center shrink-0 cursor-pointer hover:border-rose-700 transition-colors overflow-hidden"
                 >
                   {uploading ? (
-                    <Loader2 size={22} className="text-primary animate-spin" />
+                    <Loader2 size={20} className="text-amber-400 animate-spin" />
                   ) : form.image_url ? (
-                    <img
-                      src={form.image_url}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                      onError={e => { e.target.style.display = 'none'; }}
-                    />
+                    <img src={form.image_url} alt="Preview" className="w-full h-full object-cover" />
                   ) : (
-                    <div className="flex flex-col items-center gap-1.5 text-text-muted">
+                    <div className="flex flex-col items-center gap-1 text-slate-500">
                       <ImageIcon size={20} />
-                      <span className="text-[10px] font-medium">No image</span>
+                      <span className="text-[10px]">No image</span>
                     </div>
                   )}
                 </div>
 
-                <div className="flex-1 flex flex-col gap-2">
+                <div className="flex-1 space-y-2">
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/*,.heic,.heif"
+                    accept="image/*"
                     onChange={handleImageFile}
                     className="hidden"
                   />
@@ -426,57 +399,33 @@ const ProductForm = () => {
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploading}
-                    className="inline-flex items-center justify-center gap-2 bg-white/5 border border-border-color text-text-main px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-white/10 transition-colors disabled:opacity-60 w-fit"
+                    className="inline-flex items-center gap-2 bg-slate-800 border border-slate-700 text-slate-200 px-4 py-2.5 rounded-xl font-bold text-xs hover:bg-slate-700 transition-colors disabled:opacity-50"
                   >
-                    {uploading ? (
-                      <><Loader2 size={16} className="animate-spin" /> Uploading…</>
-                    ) : (
-                      <><Upload size={16} /> Upload from device</>
-                    )}
+                    {uploading ? <Loader2 size={14} className="animate-spin text-amber-400" /> : <Upload size={14} />}
+                    Upload from Device
                   </button>
-                  <p className="text-text-muted text-xs">
-                    Choose a photo from your gallery/camera roll. Any image format (JPG, PNG, WEBP, GIF, HEIC, BMP, TIFF, SVG…), up to 10MB.
+                  <p className="text-[11px] text-slate-500">
+                    Supports JPG, PNG, WEBP, HEIC up to 10MB.
                   </p>
-                  {uploadError && (
-                    <p className="text-red-400 text-xs flex items-center gap-1"><AlertCircle size={12} /> {uploadError}</p>
-                  )}
-
-                  {/* Fallback: paste a URL instead */}
-                  <details className="mt-1">
-                    <summary className="text-xs text-text-muted cursor-pointer hover:text-text-main select-none">
-                      Or paste an image URL instead
-                    </summary>
-                    <input
-                      type="url"
-                      name="image_url"
-                      value={form.image_url}
-                      onChange={handleChange}
-                      placeholder="https://images.unsplash.com/..."
-                      className="w-full mt-2 px-4 py-2.5 bg-bg-main border border-border-color rounded-xl text-text-main text-sm placeholder:text-text-muted/50 focus:border-primary focus:ring-1 focus:ring-primary/30 outline-none transition-all"
-                    />
-                  </details>
+                  {uploadError && <p className="text-rose-400 text-[11px]">{uploadError}</p>}
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* ── Submit Bar ── */}
-        <div className="flex gap-3 sticky bottom-4">
+        {/* Submit Actions */}
+        <div className="flex gap-3 pt-2">
           <button
             type="submit"
             disabled={saving || success || uploading}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-primary text-white px-8 py-3.5 rounded-xl font-bold text-sm hover:bg-primary-hover transition-all shadow-lg shadow-primary/25 active:scale-95 disabled:opacity-60"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-rose-900 to-red-800 hover:from-rose-800 text-white px-8 py-3.5 rounded-2xl font-bold text-xs shadow-lg shadow-rose-950/50 transition-all active:scale-95 disabled:opacity-60"
           >
-            {saving ? (
-              <><span className="animate-spin border-2 border-white/30 border-t-white rounded-full w-4 h-4" /> Saving...</>
-            ) : (
-              <><Save size={18} /> {isEdit ? 'Update Product' : 'Add Product'}</>
-            )}
+            {saving ? 'Saving Product...' : <><Save size={16} /> {isEdit ? 'Update Product' : 'Publish Product'}</>}
           </button>
           <Link
             to="/admin/products"
-            className="flex items-center justify-center px-6 py-3.5 rounded-xl border border-border-color text-text-muted font-bold text-sm hover:bg-white/5 transition-all"
+            className="px-6 py-3.5 rounded-2xl border border-slate-800 text-slate-400 font-bold text-xs hover:bg-slate-800 hover:text-white transition-colors"
           >
             Cancel
           </Link>

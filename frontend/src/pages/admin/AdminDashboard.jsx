@@ -3,7 +3,9 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../api/api';
 import {
   Users, ShoppingBag, DollarSign, Package, TrendingUp,
-  Eye, Plus, Footprints, BarChart3, RefreshCw, AlertTriangle
+  Eye, Plus, Footprints, BarChart3, RefreshCw, AlertTriangle,
+  ArrowUpRight, Clock, ShieldCheck, Sparkles, CheckCircle2,
+  ChevronRight
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
@@ -12,19 +14,15 @@ import {
 } from 'recharts';
 
 const STATUS_COLORS = {
-  pending:    'bg-yellow-900/30 text-yellow-400 border-yellow-700/40',
-  processing: 'bg-blue-900/30 text-blue-400 border-blue-700/40',
-  packaging:  'bg-purple-900/30 text-purple-400 border-purple-700/40',
-  shipped:    'bg-indigo-900/30 text-indigo-400 border-indigo-700/40',
-  delivered:  'bg-green-900/30 text-green-400 border-green-700/40',
-  cancelled:  'bg-red-900/30 text-red-400 border-red-700/40',
+  pending:    'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  processing: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  packaging:  'bg-purple-500/10 text-purple-400 border-purple-500/20',
+  shipped:    'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+  delivered:  'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  cancelled:  'bg-rose-500/10 text-rose-400 border-rose-500/20',
 };
 
-const PIE_COLORS = ['#6B46C1', '#EC4899', '#F59E0B', '#10B981', '#3B82F6'];
-
-// Dashboard silently refetches every 30s so new orders show up without
-// the admin having to know to hit reload.
-const AUTO_REFRESH_MS = 30000;
+const PIE_COLORS = ['#991B1B', '#D97706', '#059669', '#2563EB', '#7C3AED'];
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -33,9 +31,10 @@ const AdminDashboard = () => {
     total_visitors: 0, sales_graph: [], monthly_revenue: [], top_products: [], top_categories: []
   });
   const [recentOrders, setRecentOrders] = useState([]);
+  const [lowStockProducts, setLowStockProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [errors, setErrors] = useState([]); // which parts failed to load, shown to the admin instead of hidden
+  const [errors, setErrors] = useState([]);
   const [lastUpdated, setLastUpdated] = useState(null);
   const isFirstLoad = useRef(true);
 
@@ -43,14 +42,11 @@ const AdminDashboard = () => {
     if (isFirstLoad.current) setLoading(true);
     else setRefreshing(true);
 
-    // Promise.allSettled instead of Promise.all: one endpoint failing
-    // (auth hiccup, network blip, etc.) no longer blanks the whole
-    // dashboard silently — each section loads independently and we
-    // surface exactly what failed.
-    const [statsRes, ordersRes, analyticsRes] = await Promise.allSettled([
+    const [statsRes, ordersRes, analyticsRes, productsRes] = await Promise.allSettled([
       api.get('/admin/stats'),
       api.get('/orders/all'),
       api.get('/admin/analytics'),
+      api.get('/products/'),
     ]);
 
     const newErrors = [];
@@ -58,22 +54,24 @@ const AdminDashboard = () => {
     if (statsRes.status === 'fulfilled') {
       setStats(statsRes.value.data);
     } else {
-      newErrors.push('Stats load nahi hue');
-      console.error('Failed to fetch admin stats:', statsRes.reason);
+      newErrors.push('Stats payload could not be loaded');
     }
 
     if (ordersRes.status === 'fulfilled') {
       setRecentOrders(ordersRes.value.data.slice(0, 5));
     } else {
-      newErrors.push('Orders load nahi hue');
-      console.error('Failed to fetch orders:', ordersRes.reason);
+      newErrors.push('Recent orders payload failed');
     }
 
     if (analyticsRes.status === 'fulfilled') {
       setAnalytics(analyticsRes.value.data);
     } else {
-      newErrors.push('Analytics load nahi hue');
-      console.error('Failed to fetch analytics:', analyticsRes.reason);
+      newErrors.push('Analytics charts payload failed');
+    }
+
+    if (productsRes.status === 'fulfilled') {
+      const lowStock = productsRes.value.data.filter(p => p.stock < 5);
+      setLowStockProducts(lowStock);
     }
 
     setErrors(newErrors);
@@ -83,161 +81,236 @@ const AdminDashboard = () => {
     isFirstLoad.current = false;
   }, []);
 
+  // Smart window-focus auto-refresh instead of wasteful 30s background polling
   useEffect(() => {
     fetchDashboardData();
-    const interval = setInterval(fetchDashboardData, AUTO_REFRESH_MS);
-    return () => clearInterval(interval);
+
+    const handleFocus = () => {
+      fetchDashboardData();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') fetchDashboardData();
+    });
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [fetchDashboardData]);
 
   const formatPrice = (price) => `₹${Number(price || 0).toLocaleString('en-IN')}`;
   const formatDate  = (d) => new Date(d).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
 
   const statCards = [
-    { label: 'Total Sales',  value: formatPrice(stats.total_sales),      icon: <DollarSign size={22} />, color: 'bg-gradient-to-br from-indigo-500 to-purple-600' },
-    { label: 'Total Orders', value: stats.order_count,                    icon: <ShoppingBag size={22} />, color: 'bg-gradient-to-br from-pink-500 to-rose-500' },
-    { label: 'Products',     value: stats.product_count,                  icon: <Package size={22} />,     color: 'bg-gradient-to-br from-sky-500 to-cyan-400' },
-    { label: 'Customers',    value: stats.user_count,                     icon: <Users size={22} />,       color: 'bg-gradient-to-br from-emerald-500 to-teal-400' },
-    { label: 'Visitors',     value: analytics.total_visitors,             icon: <Footprints size={22} />,  color: 'bg-gradient-to-br from-amber-500 to-orange-500' },
+    { label: 'Total Revenue',  value: formatPrice(stats.total_sales),  icon: <DollarSign size={22} />, color: 'from-rose-900 to-red-950 border-rose-800/40 text-rose-300' },
+    { label: 'Total Orders',   value: stats.order_count,               icon: <ShoppingBag size={22} />, color: 'from-amber-900 to-amber-950 border-amber-800/40 text-amber-300' },
+    { label: 'Catalog Items',  value: stats.product_count,             icon: <Package size={22} />,     color: 'from-emerald-900 to-emerald-950 border-emerald-800/40 text-emerald-300' },
+    { label: 'Registered Users', value: stats.user_count,              icon: <Users size={22} />,       color: 'from-blue-900 to-blue-950 border-blue-800/40 text-blue-300' },
+    { label: 'Store Visitors', value: analytics.total_visitors,        icon: <Footprints size={22} />,  color: 'from-purple-900 to-purple-950 border-purple-800/40 text-purple-300' },
   ];
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-primary" />
+      <div className="flex flex-col items-center justify-center h-96 gap-3">
+        <div className="w-12 h-12 rounded-full border-4 border-rose-900 border-t-amber-400 animate-spin" />
+        <p className="text-slate-400 font-bold text-sm">Loading Executive Dashboard...</p>
       </div>
     );
   }
 
   const chartTooltipStyle = {
     background: '#111827',
-    border: '1px solid #1f2937',
-    borderRadius: '10px',
-    color: '#f3f4f6',
+    border: '1px solid #374151',
+    borderRadius: '12px',
+    color: '#F9FAFB',
     fontSize: '0.8rem',
+    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.5)',
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto space-y-8">
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-4">
+      {/* Top Header & Actions */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#0F172A] border border-slate-700/60 shadow-2xl rounded-3xl p-6 shadow-xl">
         <div>
-          <h1 className="text-3xl md:text-4xl font-black font-serif text-text-main mb-1">Admin Dashboard</h1>
-          <p className="text-text-muted">Welcome back, {user?.username}! Here's your store overview.</p>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-2xl md:text-3xl font-black font-serif text-white tracking-tight">
+              Executive Store Metrics
+            </h1>
+            <Sparkles size={20} className="text-amber-400" />
+          </div>
+          <p className="text-slate-400 text-sm">
+            Welcome back, <strong className="text-white font-bold">{user?.username}</strong>! Live revenue, inventory &amp; order performance.
+          </p>
         </div>
+
         <div className="flex items-center gap-3 shrink-0">
           <button
             onClick={fetchDashboardData}
             disabled={refreshing}
-            title="Refresh dashboard data"
-            className="flex items-center gap-2 bg-white/5 border border-border-color text-text-main px-4 py-3 rounded-xl font-bold text-sm hover:bg-white/10 transition-colors disabled:opacity-60"
+            className="flex items-center gap-2 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-slate-200 px-4 py-2.5 rounded-xl font-bold text-xs transition-colors disabled:opacity-50"
           >
-            <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-            {refreshing ? 'Refreshing…' : 'Refresh'}
+            <RefreshCw size={14} className={refreshing ? 'animate-spin text-amber-400' : ''} />
+            {refreshing ? 'Syncing...' : 'Sync Data'}
           </button>
+
           <Link
             to="/admin/products/new"
-            className="flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-xl font-bold text-sm hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20"
+            className="flex items-center gap-2 bg-gradient-to-r from-rose-900 to-red-800 hover:from-rose-800 hover:to-red-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs transition-all shadow-lg shadow-rose-950/50"
           >
-            <Plus size={18} /> Add Product
+            <Plus size={16} /> Add Product
           </Link>
         </div>
       </div>
 
-      {/* Last updated + auto-refresh note */}
       {lastUpdated && (
-        <p className="text-text-muted text-xs mb-4">
-          Last updated: {lastUpdated.toLocaleTimeString('en-IN')} · Auto-refreshes every 30s
-        </p>
+        <div className="flex items-center justify-between text-xs text-slate-500 px-2">
+          <span className="flex items-center gap-1.5">
+            <Clock size={13} className="text-slate-400" /> Last updated: {lastUpdated.toLocaleTimeString('en-IN')}
+          </span>
+          <span className="text-slate-500">Auto-syncs on window focus</span>
+        </div>
       )}
 
-      {/* Error banner — shown instead of silently blanking the dashboard */}
+      {/* Errors notification if present */}
       {errors.length > 0 && (
-        <div className="flex items-start gap-3 bg-red-900/20 border border-red-700/40 text-red-300 rounded-xl p-4 mb-6">
-          <AlertTriangle size={18} className="mt-0.5 shrink-0" />
-          <div className="text-sm">
-            <p className="font-bold mb-1">Kuch data load nahi ho paya:</p>
-            <p>{errors.join(', ')}. Backend connection ya login check karke "Refresh" try karo. (Details browser console mein hain.)</p>
+        <div className="flex items-start gap-3 bg-red-950/40 border border-red-900/60 text-red-300 rounded-2xl p-4 text-xs">
+          <AlertTriangle size={18} className="mt-0.5 shrink-0 text-red-400" />
+          <div>
+            <p className="font-bold mb-1">Part of the data payload failed to load:</p>
+            <p>{errors.join(', ')}. Check connection or retry sync.</p>
           </div>
         </div>
       )}
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
-        {statCards.map(card => (
-          <div key={card.label} className="bg-bg-card border border-border-color rounded-2xl p-5 relative overflow-hidden">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white mb-4 ${card.color}`}>
-              {card.icon}
+      {/* KPI Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        {statCards.map((card) => (
+          <div
+            key={card.label}
+            className={`bg-gradient-to-br ${card.color} border rounded-3xl p-5 relative overflow-hidden shadow-lg transition-transform hover:-translate-y-1`}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2.5 rounded-2xl bg-black/30 backdrop-blur-md">
+                {card.icon}
+              </div>
+              <ArrowUpRight size={18} className="opacity-40" />
             </div>
-            <h3 className="text-2xl font-black font-serif text-text-main mb-1">{card.value}</h3>
-            <p className="text-text-muted text-sm">{card.label}</p>
-            {card.label === 'Total Sales' && (
-              <TrendingUp size={16} className="absolute top-5 right-5 text-green-400" />
-            )}
+            <h3 className="text-2xl font-black font-serif text-white mb-1 tracking-tight">{card.value}</h3>
+            <p className="text-xs font-medium opacity-80 uppercase tracking-wider">{card.label}</p>
           </div>
         ))}
       </div>
 
-      {/* Sales Graph + Monthly Revenue */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-8">
-        <div className="bg-bg-card border border-border-color rounded-2xl p-6">
-          <h2 className="text-lg font-black font-serif text-text-main mb-1">Sales Graph</h2>
-          <p className="text-text-muted text-xs mb-4">Last 14 days revenue</p>
-          <ResponsiveContainer width="100%" height={220}>
+      {/* Low Stock Alert Section (if any stock < 5) */}
+      {lowStockProducts.length > 0 && (
+        <div className="bg-amber-950/20 border border-amber-900/40 rounded-3xl p-5 shadow-lg">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
+              <AlertTriangle size={18} /> Low Stock Warning ({lowStockProducts.length} items needing restock)
+            </div>
+            <Link to="/admin/products" className="text-xs text-amber-400 font-bold hover:underline flex items-center gap-1">
+              View All Products <ChevronRight size={14} />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+            {lowStockProducts.slice(0, 4).map((p) => (
+              <div key={p.id} className="bg-[#111827] border border-slate-800 rounded-2xl p-3 flex items-center justify-between">
+                <div className="min-w-0 pr-2">
+                  <p className="font-bold text-white text-xs truncate">{p.name}</p>
+                  <p className="text-[11px] text-slate-400">Stock: <strong className="text-red-400">{p.stock} remaining</strong></p>
+                </div>
+                <Link
+                  to={`/admin/products/${p.id}/edit`}
+                  className="px-2.5 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-lg text-[11px] font-bold hover:bg-amber-500/20 shrink-0"
+                >
+                  Restock
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Analytics Charts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        {/* Sales Graph (14 Days) */}
+        <div className="bg-[#0F172A] border border-slate-700/60 shadow-2xl rounded-3xl p-6 shadow-xl">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-black font-serif text-white">14-Day Sales Revenue</h2>
+              <p className="text-slate-400 text-xs">Daily transaction volume &amp; trend</p>
+            </div>
+            <TrendingUp size={18} className="text-rose-400" />
+          </div>
+
+          <ResponsiveContainer width="100%" height={230}>
             <AreaChart data={analytics.sales_graph}>
               <defs>
-                <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#6B46C1" stopOpacity={0.5} />
-                  <stop offset="100%" stopColor="#6B46C1" stopOpacity={0} />
+                <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#991B1B" stopOpacity={0.6} />
+                  <stop offset="100%" stopColor="#991B1B" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
-              <XAxis dataKey="date" tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#1F2937" vertical={false} />
+              <XAxis dataKey="date" tick={{ fill: '#9CA3AF', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#9CA3AF', fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={chartTooltipStyle} formatter={(v) => [`₹${v.toLocaleString('en-IN')}`, 'Revenue']} />
-              <Area type="monotone" dataKey="revenue" stroke="#6B46C1" strokeWidth={2} fill="url(#salesGradient)" />
+              <Area type="monotone" dataKey="revenue" stroke="#E11D48" strokeWidth={2.5} fill="url(#salesGrad)" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-bg-card border border-border-color rounded-2xl p-6">
-          <h2 className="text-lg font-black font-serif text-text-main mb-1">Monthly Revenue</h2>
-          <p className="text-text-muted text-xs mb-4">Last 6 months</p>
-          <ResponsiveContainer width="100%" height={220}>
+        {/* Monthly Revenue Bar Chart */}
+        <div className="bg-[#0F172A] border border-slate-700/60 shadow-2xl rounded-3xl p-6 shadow-xl">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-black font-serif text-white">Monthly Revenue Breakdown</h2>
+              <p className="text-slate-400 text-xs">Performance over the past 6 months</p>
+            </div>
+            <BarChart3 size={18} className="text-amber-400" />
+          </div>
+
+          <ResponsiveContainer width="100%" height={230}>
             <BarChart data={analytics.monthly_revenue}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
-              <XAxis dataKey="month" tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#1F2937" vertical={false} />
+              <XAxis dataKey="month" tick={{ fill: '#9CA3AF', fontSize: 11 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#9CA3AF', fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip contentStyle={chartTooltipStyle} formatter={(v) => [`₹${v.toLocaleString('en-IN')}`, 'Revenue']} />
-              <Bar dataKey="revenue" fill="#EC4899" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="revenue" fill="#D97706" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
+
       </div>
 
-      {/* Top Products + Top Categories */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-8">
-        <div className="bg-bg-card border border-border-color rounded-2xl p-6">
-          <h2 className="text-lg font-black font-serif text-text-main mb-4">Top Products</h2>
+      {/* Top Products & Categories Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <div className="bg-[#0F172A] border border-slate-700/60 shadow-2xl rounded-3xl p-6 shadow-xl">
+          <h2 className="text-lg font-black font-serif text-white mb-4">Best-Selling Products</h2>
           {analytics.top_products.length === 0 ? (
-            <p className="text-text-muted text-sm py-8 text-center">Koi sales data nahi hai abhi.</p>
+            <p className="text-slate-500 text-xs py-10 text-center">No sales recorded yet.</p>
           ) : (
             <div className="space-y-4">
               {analytics.top_products.map((p, i) => {
                 const max = analytics.top_products[0].revenue || 1;
                 return (
-                  <div key={p.name}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-text-main font-semibold truncate pr-2">{i + 1}. {p.name}</span>
-                      <span className="text-text-muted shrink-0">{formatPrice(p.revenue)}</span>
+                  <div key={p.name} className="space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-slate-200 font-bold truncate">{i + 1}. {p.name}</span>
+                      <span className="text-amber-400 font-bold shrink-0">{formatPrice(p.revenue)}</span>
                     </div>
-                    <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-primary to-secondary"
+                        className="h-full rounded-full bg-gradient-to-r from-rose-900 to-amber-500"
                         style={{ width: `${(p.revenue / max) * 100}%` }}
                       />
                     </div>
-                    <p className="text-text-muted text-xs mt-1">{p.quantity_sold} sold</p>
+                    <p className="text-[10px] text-slate-500">{p.quantity_sold} units sold</p>
                   </div>
                 );
               })}
@@ -245,12 +318,12 @@ const AdminDashboard = () => {
           )}
         </div>
 
-        <div className="bg-bg-card border border-border-color rounded-2xl p-6">
-          <h2 className="text-lg font-black font-serif text-text-main mb-4">Top Categories</h2>
+        <div className="bg-[#0F172A] border border-slate-700/60 shadow-2xl rounded-3xl p-6 shadow-xl">
+          <h2 className="text-lg font-black font-serif text-white mb-4">Top Categories</h2>
           {analytics.top_categories.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-text-muted">
-              <BarChart3 size={36} className="opacity-30 mb-2" />
-              <p className="text-sm">Koi sales data nahi hai abhi.</p>
+            <div className="flex flex-col items-center justify-center py-10 text-slate-500">
+              <BarChart3 size={32} className="opacity-30 mb-2" />
+              <p className="text-xs">No category analytics recorded yet.</p>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={220}>
@@ -261,64 +334,74 @@ const AdminDashboard = () => {
                   nameKey="name"
                   cx="50%"
                   cy="50%"
-                  innerRadius={50}
-                  outerRadius={80}
-                  paddingAngle={3}
+                  innerRadius={45}
+                  outerRadius={75}
+                  paddingAngle={4}
                 >
                   {analytics.top_categories.map((entry, i) => (
                     <Cell key={entry.name} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip contentStyle={chartTooltipStyle} formatter={(v) => [`₹${v.toLocaleString('en-IN')}`, 'Revenue']} />
-                <Legend
-                  formatter={(value) => <span style={{ color: '#9ca3af', fontSize: '0.75rem' }}>{value}</span>}
-                />
+                <Legend formatter={(value) => <span style={{ color: '#9CA3AF', fontSize: '0.75rem' }}>{value}</span>} />
               </PieChart>
             </ResponsiveContainer>
           )}
         </div>
+
       </div>
 
-      {/* Recent Orders */}
-      <div className="bg-bg-card border border-border-color rounded-2xl p-6 mb-8">
+      {/* Recent Orders Section */}
+      <div className="bg-[#0F172A] border border-slate-700/60 shadow-2xl rounded-3xl p-6 shadow-xl">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-black font-serif text-text-main">Recent Orders</h2>
-          <Link to="/admin/orders" className="text-primary font-bold text-sm flex items-center gap-1 hover:underline">
-            View All <Eye size={15} />
+          <div>
+            <h2 className="text-xl font-black font-serif text-white">Recent Orders</h2>
+            <p className="text-slate-400 text-xs">Latest customer purchases requiring fulfillment</p>
+          </div>
+          <Link
+            to="/admin/orders"
+            className="text-amber-400 hover:text-amber-300 text-xs font-bold flex items-center gap-1"
+          >
+            View All Orders <Eye size={14} />
           </Link>
         </div>
 
         {recentOrders.length === 0 ? (
-          <div className="text-center py-16 text-text-muted">
-            <Package size={48} className="mx-auto mb-4 opacity-30" />
-            <h3 className="font-bold text-text-main mb-1">No orders yet</h3>
-            <p className="text-sm">Orders will appear here once customers start shopping.</p>
+          <div className="text-center py-12 text-slate-500">
+            <Package size={40} className="mx-auto mb-2 opacity-30" />
+            <p className="text-xs font-bold text-slate-400">No recent orders found</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-border-color">
-                  {['Order ID', 'Customer', 'Date', 'Total', 'Status', 'Actions'].map(h => (
-                    <th key={h} className="text-left py-3 px-2 text-xs font-bold text-text-muted uppercase tracking-wider">{h}</th>
-                  ))}
+                <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider text-left">
+                  <th className="py-3 px-3">Order ID</th>
+                  <th className="py-3 px-3">Customer</th>
+                  <th className="py-3 px-3">Date</th>
+                  <th className="py-3 px-3">Total Amount</th>
+                  <th className="py-3 px-3">Status</th>
+                  <th className="py-3 px-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                {recentOrders.map(order => (
-                  <tr key={order.id} className="border-b border-border-color last:border-0 hover:bg-white/5 transition-colors">
-                    <td className="py-3 px-2 font-bold text-text-main">#{order.id}</td>
-                    <td className="py-3 px-2 text-text-muted">{order.shipping_name || `User ${order.user_id}`}</td>
-                    <td className="py-3 px-2 text-text-muted">{formatDate(order.created_at)}</td>
-                    <td className="py-3 px-2 font-bold text-text-main">{formatPrice(order.total_price)}</td>
-                    <td className="py-3 px-2">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold border capitalize ${STATUS_COLORS[order.status] || STATUS_COLORS.pending}`}>
+              <tbody className="divide-y divide-slate-800/60">
+                {recentOrders.map((order) => (
+                  <tr key={order.id} className="hover:bg-slate-800/40 transition-colors">
+                    <td className="py-3 px-3 font-bold text-white">#{order.id}</td>
+                    <td className="py-3 px-3 text-slate-300">{order.shipping_name || `User #${order.user_id}`}</td>
+                    <td className="py-3 px-3 text-slate-400">{formatDate(order.created_at)}</td>
+                    <td className="py-3 px-3 font-bold text-amber-400">{formatPrice(order.total_price)}</td>
+                    <td className="py-3 px-3">
+                      <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider border ${STATUS_COLORS[order.status] || STATUS_COLORS.pending}`}>
                         {order.status}
                       </span>
                     </td>
-                    <td className="py-3 px-2">
-                      <Link to="/admin/orders" className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-text-muted hover:bg-primary hover:text-white transition-colors">
-                        <Eye size={15} />
+                    <td className="py-3 px-3 text-right">
+                      <Link
+                        to="/admin/orders"
+                        className="inline-flex p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-rose-900 transition-colors"
+                      >
+                        <Eye size={14} />
                       </Link>
                     </td>
                   </tr>
@@ -327,24 +410,6 @@ const AdminDashboard = () => {
             </table>
           </div>
         )}
-      </div>
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        <div className="bg-bg-card border border-border-color rounded-2xl p-6">
-          <h3 className="font-black font-serif text-text-main text-lg mb-2">Product Management</h3>
-          <p className="text-text-muted text-sm mb-5">Manage your product catalog, inventory, and pricing.</p>
-          <Link to="/admin/products" className="inline-flex items-center gap-2 bg-white/5 border border-border-color text-text-main px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-white/10 transition-colors">
-            Manage Products <Package size={16} />
-          </Link>
-        </div>
-        <div className="bg-bg-card border border-border-color rounded-2xl p-6">
-          <h3 className="font-black font-serif text-text-main text-lg mb-2">Order Management</h3>
-          <p className="text-text-muted text-sm mb-5">Track orders, update status, and manage shipping.</p>
-          <Link to="/admin/orders" className="inline-flex items-center gap-2 bg-white/5 border border-border-color text-text-main px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-white/10 transition-colors">
-            Manage Orders <ShoppingBag size={16} />
-          </Link>
-        </div>
       </div>
 
     </div>
