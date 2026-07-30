@@ -25,12 +25,9 @@ try:
     print("Database: Connected to MySQL")
 except Exception as e:
     print(f"Database: MySQL connection failed ({e}). Falling back to SQLite...")
-    # Make path absolute based on backend project directory
-    BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    db_path = os.path.join(BASE_DIR, "ladli_v2.db")
-    DATABASE_URL = f"sqlite:///{db_path}"
+    DATABASE_URL = "sqlite:///./ladli_v2.db"
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-    print(f"Database: Using SQLite locally at {db_path}")
+    print("Database: Using SQLite locally at ./ladli_v2.db")
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()

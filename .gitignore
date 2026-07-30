@@ -1,0 +1,21 @@
+# Node
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+backend_backup/node_modules/
+
+# Python
+venv/
+backend/venv/
+backend_backup/venv/
+
+# Cache
+__pycache__/
+*.pyc
+
+# Environment
+.env
+backend/.env
+
+# Database
+*.db
