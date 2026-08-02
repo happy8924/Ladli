@@ -169,11 +169,18 @@ const ProductManagement = () => {
                           )}
                           <div className="min-w-0">
                             <p className="font-bold text-white truncate">{product.name}</p>
-                            {product.fabric && (
-                              <span className="text-[10px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded-md inline-block mt-0.5">
-                                {product.fabric}
-                              </span>
-                            )}
+                            <div className="flex flex-wrap items-center gap-1 mt-0.5">
+                              {product.fabric && (
+                                <span className="text-[10px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded-md inline-block">
+                                  {product.fabric}
+                                </span>
+                              )}
+                              {product.colors && (
+                                <span className="text-[10px] text-amber-400/90 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md inline-block">
+                                  {product.colors.split(',').length} Colors
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </td>

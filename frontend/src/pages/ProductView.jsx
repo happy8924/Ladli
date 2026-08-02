@@ -10,7 +10,7 @@ import {
   Award, Truck, RotateCcw, ChevronLeft, ChevronRight,
   Plus, Minus, ShoppingBag, CheckCircle, ShieldCheck,
   Star, Heart, ZoomIn, Ruler, Share2, Package,
-  X, MessageSquare
+  X, MessageSquare, Edit
 } from 'lucide-react';
 
 /* ══════════════════════════════════════════
@@ -27,14 +27,51 @@ const OFFLINE_IMAGES = [
   'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop',
 ];
 
-/* Returns 4 gallery images for a product:
-   first = product's own image (or fallback),
-   rest  = related offline images */
+const COLOR_HEX_MAP = {
+  'red': '#EF4444',
+  'maroon': '#800000',
+  'royal blue': '#2563EB',
+  'blue': '#3B82F6',
+  'mustard yellow': '#EAB308',
+  'yellow': '#FACC15',
+  'emerald green': '#10B981',
+  'green': '#16A34A',
+  'rose pink': '#EC4899',
+  'pink': '#F472B6',
+  'gold': '#D97706',
+  'black': '#18181B',
+  'white': '#FFFFFF',
+  'purple': '#A855F7',
+  'navy blue': '#1E3A8A',
+  'navy': '#1E3A8A',
+  'orange': '#F97316',
+  'peach': '#FDBA74',
+};
+
+const getColorHex = (colorName) => {
+  const normalized = colorName.trim().toLowerCase();
+  return COLOR_HEX_MAP[normalized] || '#94A3B8';
+};
+
+/* Returns real gallery images for a product:
+   Only returns actual product image and image_urls, avoiding random side images */
 const getGalleryImages = (product) => {
-  const seed   = product?.id || 0;
-  const main   = product?.image_url || OFFLINE_IMAGES[seed % OFFLINE_IMAGES.length];
-  const extras = [0, 1, 2].map(i => OFFLINE_IMAGES[(seed + i + 1) % OFFLINE_IMAGES.length]);
-  return [main, ...extras];
+  if (!product) return [];
+  const images = [];
+  if (product.image_url) {
+    images.push(product.image_url);
+  }
+  if (product.image_urls) {
+    const extra = product.image_urls
+      .split(',')
+      .map(url => url.trim())
+      .filter(Boolean);
+    images.push(...extra);
+  }
+  if (images.length === 0) {
+    images.push('https://images.unsplash.com/photo-1610030469983-98e550d6153c?q=80&w=800&auto=format&fit=crop');
+  }
+  return images;
 };
 
 /* ══════════════════════════════════════════
@@ -106,6 +143,7 @@ const ProductView = () => {
   const [product, setProduct]       = useState(null);
   const [relatedProducts, setRelated] = useState([]);
   const [selectedSize, setSize]     = useState('M');
+  const [selectedColor, setColor]   = useState('');
   const [quantity, setQty]          = useState(1);
   const [loading, setLoading]       = useState(true);
   const [addedFeedback, setAdded]   = useState(false);
@@ -137,6 +175,12 @@ const ProductView = () => {
 
         const prod = prodRes.data;
         setProduct(prod);
+
+        const initialColors = (prod.colors || "Red, Maroon, Royal Blue, Mustard Yellow, Emerald Green, Rose Pink, Gold, Black")
+          .split(',')
+          .map(c => c.trim())
+          .filter(Boolean);
+        setColor(initialColors[0] || 'Red');
 
         const imgs = getGalleryImages(prod);
         setGallery(imgs);
@@ -256,23 +300,25 @@ const ProductView = () => {
           {/* ─────── LEFT: Image Gallery ─────── */}
           <div className="flex flex-col-reverse md:flex-row gap-4 lg:sticky lg:top-24 h-max">
 
-            {/* Thumbnails */}
-            <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-visible pb-1 md:pb-0 w-full md:w-20 shrink-0">
-              {gallery.map((img, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setMainImg(img)}
-                  className={`relative rounded-xl overflow-hidden aspect-[3/4] border-2 shrink-0 transition-all duration-200 ${
-                    mainImg === img
-                      ? 'border-primary shadow-lg shadow-primary/20 scale-105'
-                      : 'border-transparent opacity-60 hover:opacity-100 hover:border-border-color'
-                  }`}
-                  style={{ width: 76, height: 96 }}
-                >
-                  <img src={img} alt={`View ${idx + 1}`} className="w-full h-full object-cover" />
-                </button>
-              ))}
-            </div>
+            {/* Thumbnails (Only rendered if multiple images exist) */}
+            {gallery.length > 1 && (
+              <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-visible pb-1 md:pb-0 w-full md:w-20 shrink-0">
+                {gallery.map((img, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setMainImg(img)}
+                    className={`relative rounded-xl overflow-hidden aspect-[3/4] border-2 shrink-0 transition-all duration-200 ${
+                      mainImg === img
+                        ? 'border-primary shadow-lg shadow-primary/20 scale-105'
+                        : 'border-transparent opacity-60 hover:opacity-100 hover:border-border-color'
+                    }`}
+                    style={{ width: 76, height: 96 }}
+                  >
+                    <img src={img} alt={`View ${idx + 1}`} className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Main image with zoom */}
             <div className="relative flex-1 bg-slate-900 rounded-3xl overflow-hidden aspect-[3/4] md:aspect-auto md:h-[680px] border border-border-color cursor-crosshair group"
@@ -428,6 +474,47 @@ const ProductView = () => {
               </div>
             </div>
 
+            {/* Color Selector */}
+            {(() => {
+              const colorsList = (product?.colors || "Red, Maroon, Royal Blue, Mustard Yellow, Emerald Green, Rose Pink, Gold, Black")
+                .split(',')
+                .map(c => c.trim())
+                .filter(Boolean);
+              if (colorsList.length === 0) return null;
+              return (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-bold text-text-main uppercase tracking-wider">
+                      Select Color: <span className="text-amber-400 font-serif font-bold normal-case text-base ml-1">{selectedColor || colorsList[0]}</span>
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2.5">
+                    {colorsList.map(c => {
+                      const hex = getColorHex(c);
+                      const isSelected = (selectedColor || colorsList[0]).toLowerCase() === c.toLowerCase();
+                      return (
+                        <button
+                          key={c}
+                          onClick={() => setColor(c)}
+                          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all border ${
+                            isSelected
+                              ? 'bg-primary text-white border-primary shadow-lg shadow-primary/25 scale-105 ring-2 ring-primary/40'
+                              : 'bg-bg-card border-border-color text-text-muted hover:border-primary/50 hover:text-text-main'
+                          }`}
+                        >
+                          <span
+                            className="w-4 h-4 rounded-full border border-black/40 shrink-0 shadow-sm"
+                            style={{ backgroundColor: hex }}
+                          />
+                          {c}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Quantity */}
             <div>
               <span className="text-sm font-bold text-text-main uppercase tracking-wider block mb-3">Quantity</span>
@@ -454,36 +541,53 @@ const ProductView = () => {
             </div>
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={handleBuyNow}
-                disabled={product.stock === 0}
-                className="flex-1 py-4 rounded-2xl font-black text-sm bg-gradient-to-r from-primary to-indigo-500 text-white hover:from-primary-hover hover:to-indigo-600 shadow-xl shadow-primary/25 active:scale-95 transition-all duration-200 disabled:opacity-40"
-              >
-                Buy Now
-              </button>
-              <button
-                onClick={handleAddToCart}
-                disabled={product.stock === 0 || addedFeedback}
-                className={`flex-1 py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all duration-200 active:scale-95 ${
-                  addedFeedback
-                    ? 'bg-green-600 text-white'
-                    : 'bg-bg-card border-2 border-primary text-primary hover:bg-primary hover:text-white disabled:opacity-40'
-                }`}
-              >
-                {addedFeedback ? <><CheckCircle size={18} /> Added!</> : <><ShoppingBag size={18} /> Add to Bag</>}
-              </button>
-              <button
-                onClick={() => toggleWishlist(product)}
-                className={`w-14 h-14 rounded-2xl flex items-center justify-center border-2 transition-all duration-200 active:scale-95 ${
-                  wishlisted
-                    ? 'bg-red-600 border-red-600 text-white'
-                    : 'border-border-color text-text-muted hover:border-red-400 hover:text-red-400'
-                }`}
-              >
-                <Heart size={20} className={wishlisted ? 'fill-current' : ''} />
-              </button>
-            </div>
+            {user?.role === 'admin' || user?.role === 'logistics' ? (
+              <div className="bg-[#0F172A] border border-amber-500/40 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center gap-2 text-amber-400 font-bold text-xs">
+                  <ShieldCheck size={16} /> Admin Mode Active — Store Management View
+                </div>
+                <p className="text-slate-400 text-xs">
+                  Shopping actions (Cart, Wishlist &amp; Checkout) are disabled for Admin accounts.
+                </p>
+                <Link
+                  to={`/admin/products/${product.id}/edit`}
+                  className="w-full py-3.5 rounded-xl font-bold text-sm bg-amber-500 hover:bg-amber-600 text-slate-950 flex items-center justify-center gap-2 shadow-lg transition-colors"
+                >
+                  <Edit size={18} /> Edit Product Listing in Admin Panel
+                </Link>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={handleBuyNow}
+                  disabled={product.stock === 0}
+                  className="flex-1 py-4 rounded-2xl font-black text-sm bg-gradient-to-r from-primary to-indigo-500 text-white hover:from-primary-hover hover:to-indigo-600 shadow-xl shadow-primary/25 active:scale-95 transition-all duration-200 disabled:opacity-40"
+                >
+                  Buy Now
+                </button>
+                <button
+                  onClick={handleAddToCart}
+                  disabled={product.stock === 0 || addedFeedback}
+                  className={`flex-1 py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all duration-200 active:scale-95 ${
+                    addedFeedback
+                      ? 'bg-green-600 text-white'
+                      : 'bg-bg-card border-2 border-primary text-primary hover:bg-primary hover:text-white disabled:opacity-40'
+                  }`}
+                >
+                  {addedFeedback ? <><CheckCircle size={18} /> Added!</> : <><ShoppingBag size={18} /> Add to Bag</>}
+                </button>
+                <button
+                  onClick={() => toggleWishlist(product)}
+                  className={`w-14 h-14 rounded-2xl flex items-center justify-center border-2 transition-all duration-200 active:scale-95 ${
+                    wishlisted
+                      ? 'bg-red-600 border-red-600 text-white'
+                      : 'border-border-color text-text-muted hover:border-red-400 hover:text-red-400'
+                  }`}
+                >
+                  <Heart size={20} className={wishlisted ? 'fill-current' : ''} />
+                </button>
+              </div>
+            )}
 
             {/* Delivery Info */}
             <div className="bg-bg-card border border-border-color rounded-2xl p-5 flex flex-col gap-3">

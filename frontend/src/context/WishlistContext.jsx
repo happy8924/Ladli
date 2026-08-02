@@ -35,6 +35,11 @@ export const WishlistProvider = ({ children }) => {
             return;
         }
 
+        if (user?.role === 'admin' || user?.role === 'logistics' || auth?.isAdmin) {
+            alert("Admin accounts are for store management only. Please log in with a customer account to use wishlist.");
+            return;
+        }
+
         const exists = wishlistItems.find(item => item.id === product.id);
 
         if (exists) {

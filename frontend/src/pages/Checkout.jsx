@@ -28,10 +28,15 @@ const Checkout = () => {
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
+    if (user?.role === 'admin' || user?.role === 'logistics') {
+      alert('Admin accounts are reserved for store management and cannot place customer orders.');
+      navigate('/admin');
+      return;
+    }
     if (cartItems.length === 0) {
       navigate('/cart');
     }
-  }, [cartItems, navigate]);
+  }, [cartItems, user, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

@@ -7,6 +7,21 @@ import {
 } from 'lucide-react';
 import api from '../../api/api';
 
+const PRESET_COLORS = [
+  { name: 'Red', hex: '#EF4444' },
+  { name: 'Maroon', hex: '#800000' },
+  { name: 'Royal Blue', hex: '#2563EB' },
+  { name: 'Mustard Yellow', hex: '#EAB308' },
+  { name: 'Emerald Green', hex: '#10B981' },
+  { name: 'Rose Pink', hex: '#EC4899' },
+  { name: 'Gold', hex: '#D97706' },
+  { name: 'Black', hex: '#18181B' },
+  { name: 'White', hex: '#FFFFFF' },
+  { name: 'Purple', hex: '#A855F7' },
+  { name: 'Navy Blue', hex: '#1E3A8A' },
+  { name: 'Orange', hex: '#F97316' },
+];
+
 const EMPTY_FORM = {
   name: '',
   description: '',
@@ -16,6 +31,7 @@ const EMPTY_FORM = {
   image_url: '',
   fabric: '',
   sizes: 'S,M,L,XL,2XL',
+  colors: 'Red, Maroon, Royal Blue, Mustard Yellow, Emerald Green, Rose Pink, Gold, Black',
 };
 
 const ProductForm = () => {
@@ -102,6 +118,7 @@ const ProductForm = () => {
           image_url: p.image_url || '',
           fabric: p.fabric || '',
           sizes: p.sizes || 'S,M,L,XL,2XL',
+          colors: p.colors || 'Red, Maroon, Royal Blue, Mustard Yellow, Emerald Green, Rose Pink, Gold, Black',
         });
       })
       .catch(() => setError('Could not load product details.'))
@@ -111,6 +128,19 @@ const ProductForm = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(f => ({ ...f, [name]: value }));
+  };
+
+  const handleToggleColor = (colorName) => {
+    const currentList = form.colors
+      ? form.colors.split(',').map(c => c.trim()).filter(Boolean)
+      : [];
+    let updated;
+    if (currentList.some(c => c.toLowerCase() === colorName.toLowerCase())) {
+      updated = currentList.filter(c => c.toLowerCase() !== colorName.toLowerCase());
+    } else {
+      updated = [...currentList, colorName];
+    }
+    setForm(f => ({ ...f, colors: updated.join(', ') }));
   };
 
   const handleSubmit = async (e) => {
@@ -131,6 +161,7 @@ const ProductForm = () => {
       image_url: form.image_url || null,
       fabric: form.fabric || null,
       sizes: form.sizes || 'S,M,L,XL,2XL',
+      colors: form.colors || 'Red, Maroon, Royal Blue, Mustard Yellow, Emerald Green, Rose Pink, Gold, Black',
     };
 
     setSaving(true);
@@ -364,6 +395,45 @@ const ProductForm = () => {
                 placeholder="S,M,L,XL,2XL"
                 className="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-2xl text-white text-xs placeholder:text-slate-600 focus:border-rose-700 outline-none transition-colors"
               />
+            </div>
+
+            {/* Color Variants */}
+            <div>
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                Available Colors &amp; Shades (comma separated)
+              </label>
+              <input
+                type="text"
+                name="colors"
+                value={form.colors}
+                onChange={handleChange}
+                placeholder="Red, Maroon, Royal Blue, Mustard Yellow, Pink, Gold"
+                className="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-2xl text-white text-xs placeholder:text-slate-600 focus:border-rose-700 outline-none transition-colors mb-3"
+              />
+              <p className="text-[11px] font-semibold text-slate-400 mb-2">Quick Toggle Preset Apparel Colors:</p>
+              <div className="flex flex-wrap gap-2">
+                {PRESET_COLORS.map(c => {
+                  const selected = (form.colors || '')
+                    .split(',')
+                    .map(item => item.trim().toLowerCase())
+                    .includes(c.name.toLowerCase());
+                  return (
+                    <button
+                      key={c.name}
+                      type="button"
+                      onClick={() => handleToggleColor(c.name)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                        selected
+                          ? 'bg-slate-800 text-white border-amber-500 shadow-md shadow-amber-500/20 scale-105'
+                          : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-slate-200'
+                      }`}
+                    >
+                      <span className="w-3.5 h-3.5 rounded-full border border-black/30 shrink-0" style={{ backgroundColor: c.hex }} />
+                      {c.name}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div>

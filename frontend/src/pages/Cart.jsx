@@ -47,6 +47,38 @@ const Cart = () => {
     navigate('/checkout');
   };
 
+  if (user?.role === 'admin' || user?.role === 'logistics') {
+    return (
+      <div className="min-h-[75vh] bg-bg-main py-12 flex flex-col justify-center items-center px-4">
+        <div className="bg-[#0F172A] border border-amber-500/40 rounded-3xl p-10 max-w-lg mx-auto text-center shadow-2xl">
+          <div className="w-16 h-16 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto mb-4 border border-amber-500/30">
+            <ShieldCheck size={36} />
+          </div>
+          <h2 className="text-2xl font-black font-serif text-white mb-2">
+            Admin Account Notice
+          </h2>
+          <p className="text-slate-300 text-sm leading-relaxed mb-6">
+            Admin accounts manage store operations, product listings, and customer orders. Customer cart and purchasing actions are disabled for admin accounts.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link
+              to="/admin"
+              className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl font-bold text-sm shadow-md transition-colors"
+            >
+              Go to Admin Dashboard
+            </Link>
+            <Link
+              to="/catalog"
+              className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 rounded-xl font-bold text-sm transition-colors"
+            >
+              Browse Catalog
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (cartItems.length === 0) {
     return (
       <div className="min-h-[75vh] bg-bg-main py-12 flex flex-col justify-center items-center px-4">

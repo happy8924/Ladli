@@ -3,7 +3,7 @@ import api from '../../api/api';
 import {
   Search, Filter, Edit, Package, Truck,
   CheckCircle, XCircle, Clock, X, RefreshCw, AlertTriangle,
-  Sparkles, Eye, Calendar
+  Sparkles, Eye, Calendar, FileText, Printer, Download, User, MapPin, Phone, DollarSign
 } from 'lucide-react';
 
 const ORDER_STATUSES = [
@@ -22,10 +22,21 @@ const OrderManagement = () => {
   const [loading, setLoading]         = useState(true);
   const [searchTerm, setSearchTerm]   = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  
+  // Status Update Modal State
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showModal, setShowModal]     = useState(false);
   const [statusUpdate, setStatusUpdate] = useState({ status: '', tracking_id: '', estimated_delivery: '' });
   const [saving, setSaving]           = useState(false);
+
+  // View Details Modal State
+  const [viewingOrder, setViewingOrder] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+
+  // Invoice Modal State
+  const [invoiceOrder, setInvoiceOrder] = useState(null);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+
   const [refreshing, setRefreshing]   = useState(false);
   const [error, setError]             = useState('');
 
@@ -74,6 +85,16 @@ const OrderManagement = () => {
     setShowModal(true);
   };
 
+  const openDetailsModal = (order) => {
+    setViewingOrder(order);
+    setShowDetailsModal(true);
+  };
+
+  const openInvoiceModal = (order) => {
+    setInvoiceOrder(order);
+    setShowInvoiceModal(true);
+  };
+
   const handleStatusUpdate = async () => {
     if (!selectedOrder) return;
     setSaving(true);
@@ -85,6 +106,9 @@ const OrderManagement = () => {
       };
       const res = await api.patch(`/orders/${selectedOrder.id}/status`, payload);
       setOrders(orders.map(o => (o.id === selectedOrder.id ? res.data : o)));
+      if (viewingOrder && viewingOrder.id === selectedOrder.id) {
+        setViewingOrder(res.data);
+      }
       setShowModal(false);
       setSelectedOrder(null);
     } catch (e) {
@@ -94,10 +118,16 @@ const OrderManagement = () => {
     }
   };
 
+  const handlePrintInvoice = () => {
+    window.print();
+  };
+
   const filtered = orders.filter(o => {
-    const matchSearch = o.id.toString().includes(searchTerm) ||
-                         (o.shipping_name && o.shipping_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                         (o.shipping_phone && o.shipping_phone.includes(searchTerm));
+    const term = searchTerm.toLowerCase();
+    const matchSearch = o.id.toString().includes(term) ||
+                         (o.shipping_name && o.shipping_name.toLowerCase().includes(term)) ||
+                         (o.shipping_phone && o.shipping_phone.includes(term)) ||
+                         (o.shipping_city && o.shipping_city.toLowerCase().includes(term));
     const matchStatus = !statusFilter || o.status === statusFilter;
     return matchSearch && matchStatus;
   });
@@ -121,10 +151,10 @@ const OrderManagement = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#0F172A] border border-slate-700/60 shadow-2xl rounded-3xl p-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-black font-serif text-white flex items-center gap-2">
-            Order Fulfillment <Sparkles size={20} className="text-amber-400" />
+            Order Fulfillment Center <Sparkles size={20} className="text-amber-400" />
           </h1>
           <p className="text-slate-400 text-xs mt-1">
-            Track customer orders, manage shipments, update delivery tracking &amp; status.
+            Track customer orders, manage shipment statuses, view order details &amp; generate official GST invoices.
           </p>
         </div>
 
@@ -145,7 +175,7 @@ const OrderManagement = () => {
         </div>
       )}
 
-      {/* Filter controls */}
+      {/* Search & Filter Controls */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -153,7 +183,7 @@ const OrderManagement = () => {
             type="text"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            placeholder="Search by Order ID, Customer Name, or Phone…"
+            placeholder="Search by Order ID, Customer Name, City, or Phone…"
             className="w-full pl-11 pr-4 py-3 bg-[#1E293B] border border-slate-600 rounded-2xl text-white text-xs placeholder:text-slate-400 focus:border-amber-400 outline-none transition-colors"
           />
         </div>
@@ -166,15 +196,19 @@ const OrderManagement = () => {
             className="w-full pl-11 pr-4 py-3 bg-[#1E293B] border border-slate-600 rounded-2xl text-white text-xs focus:border-amber-400 outline-none cursor-pointer"
           >
             <option value="">All Statuses</option>
-            {ORDER_STATUSES.map(s => <option key={s.value} value={s.value} className="bg-[#1E293B] text-white">{s.label}</option>)}
+            {ORDER_STATUSES.map(s => (
+              <option key={s.value} value={s.value} className="bg-[#1E293B] text-white">
+                {s.label}
+              </option>
+            ))}
           </select>
         </div>
       </div>
 
-      {/* Orders Table */}
+      {/* Orders Table Card */}
       <div className="bg-[#0F172A] border border-slate-700/60 shadow-2xl rounded-3xl p-6">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="font-serif font-black text-white text-lg">
+          <h2 className="font-serif font-black text-white text-lg flex items-center gap-2">
             Customer Orders ({filtered.length})
           </h2>
         </div>
@@ -192,10 +226,10 @@ const OrderManagement = () => {
                 <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider text-left">
                   <th className="py-3 px-3">Order ID</th>
                   <th className="py-3 px-3">Customer</th>
-                  <th className="py-3 px-3">Shipping Address</th>
+                  <th className="py-3 px-3">Shipping Location</th>
                   <th className="py-3 px-3">Date</th>
                   <th className="py-3 px-3">Items</th>
-                  <th className="py-3 px-3">Total</th>
+                  <th className="py-3 px-3">Total Amount</th>
                   <th className="py-3 px-3">Payment Method</th>
                   <th className="py-3 px-3">Status</th>
                   <th className="py-3 px-3 text-right">Actions</th>
@@ -210,7 +244,7 @@ const OrderManagement = () => {
                       <td className="py-3 px-3 font-bold text-white">#{order.id}</td>
                       <td className="py-3 px-3 text-slate-300">
                         <p className="font-bold text-white">{order.shipping_name || `User #${order.user_id}`}</p>
-                        {order.shipping_phone && <p className="text-[10px] text-slate-500">{order.shipping_phone}</p>}
+                        {order.shipping_phone && <p className="text-[10px] text-slate-400">{order.shipping_phone}</p>}
                       </td>
                       <td className="py-3 px-3 text-slate-400 max-w-[200px]">
                         {order.shipping_address ? (
@@ -237,13 +271,34 @@ const OrderManagement = () => {
                         </span>
                       </td>
                       <td className="py-3 px-3 text-right">
-                        <button
-                          onClick={() => openStatusModal(order)}
-                          className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-rose-900 transition-colors"
-                          title="Update Order Status"
-                        >
-                          <Edit size={14} />
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          {/* View Order Details */}
+                          <button
+                            onClick={() => openDetailsModal(order)}
+                            className="p-1.5 rounded-lg bg-[#1E293B] text-slate-300 hover:text-white hover:bg-amber-600 transition-colors border border-slate-700"
+                            title="View Full Order Details"
+                          >
+                            <Eye size={14} />
+                          </button>
+
+                          {/* Update Order Status */}
+                          <button
+                            onClick={() => openStatusModal(order)}
+                            className="p-1.5 rounded-lg bg-[#1E293B] text-slate-300 hover:text-white hover:bg-blue-600 transition-colors border border-slate-700"
+                            title="Update Status & Tracking"
+                          >
+                            <Edit size={14} />
+                          </button>
+
+                          {/* Generate Invoice */}
+                          <button
+                            onClick={() => openInvoiceModal(order)}
+                            className="flex items-center gap-1 p-1.5 rounded-lg bg-[#1E293B] text-amber-400 hover:text-white hover:bg-amber-600 transition-colors border border-slate-700 text-[11px] font-bold"
+                            title="Generate Tax Invoice"
+                          >
+                            <FileText size={14} /> Invoice
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -254,12 +309,12 @@ const OrderManagement = () => {
         )}
       </div>
 
-      {/* Update Order Status Modal */}
+      {/* ── 1. UPDATE ORDER STATUS MODAL ── */}
       {showModal && selectedOrder && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[100] p-4">
           <div className="bg-[#0F172A] border border-slate-700 rounded-3xl p-6 max-w-md w-full shadow-2xl">
             <div className="flex items-center justify-between mb-5 pb-3 border-b border-slate-700">
-              <h3 className="font-black text-lg text-white font-sans">Update Order #{selectedOrder.id}</h3>
+              <h3 className="font-black text-lg text-white font-sans">Update Status for Order #{selectedOrder.id}</h3>
               <button
                 onClick={() => setShowModal(false)}
                 className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
@@ -328,6 +383,276 @@ const OrderManagement = () => {
                 {saving ? 'Updating...' : 'Save Status Update'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 2. VIEW ORDER DETAILS MODAL ── */}
+      {showDetailsModal && viewingOrder && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+          <div className="bg-[#0F172A] border border-slate-700 rounded-3xl p-6 max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div className="flex items-center justify-between mb-5 pb-3 border-b border-slate-700">
+              <div>
+                <h3 className="font-black text-xl text-white flex items-center gap-2">
+                  Order Details #{viewingOrder.id}
+                </h3>
+                <p className="text-xs text-slate-400">Placed on {formatDate(viewingOrder.created_at)}</p>
+              </div>
+              <button
+                onClick={() => setShowDetailsModal(false)}
+                className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Status & Tracking Banner */}
+              <div className="bg-[#1E293B] border border-slate-700 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                    Current Fulfillment Status
+                  </span>
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider border ${statusMeta(viewingOrder.status).cls}`}>
+                    {viewingOrder.status}
+                  </span>
+                </div>
+                {viewingOrder.tracking_id && (
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                      Tracking Number
+                    </span>
+                    <span className="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20">
+                      {viewingOrder.tracking_id}
+                    </span>
+                  </div>
+                )}
+                <div>
+                  <button
+                    onClick={() => { setShowDetailsModal(false); openStatusModal(viewingOrder); }}
+                    className="px-3 py-1.5 bg-rose-900/60 hover:bg-rose-800 text-white rounded-xl text-xs font-bold transition-colors border border-rose-700"
+                  >
+                    Change Status
+                  </button>
+                </div>
+              </div>
+
+              {/* Shipping & Payment Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-[#1E293B] border border-slate-700 rounded-2xl p-4 space-y-2">
+                  <h4 className="font-bold text-white text-xs uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-700 pb-2">
+                    <User size={14} className="text-amber-400" /> Customer Information
+                  </h4>
+                  <p className="text-sm font-bold text-white">{viewingOrder.shipping_name || `User #${viewingOrder.user_id}`}</p>
+                  <p className="text-xs text-slate-300 flex items-center gap-1.5">
+                    <Phone size={13} className="text-slate-400" /> {viewingOrder.shipping_phone || 'N/A'}
+                  </p>
+                  <div className="text-xs text-slate-300 flex items-start gap-1.5">
+                    <MapPin size={13} className="text-slate-400 shrink-0 mt-0.5" />
+                    <span>
+                      {viewingOrder.shipping_address}, {viewingOrder.shipping_city}, {viewingOrder.shipping_state} - {viewingOrder.shipping_pincode}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-[#1E293B] border border-slate-700 rounded-2xl p-4 space-y-2">
+                  <h4 className="font-bold text-white text-xs uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-700 pb-2">
+                    <DollarSign size={14} className="text-emerald-400" /> Payment &amp; Billing
+                  </h4>
+                  <div className="flex justify-between text-xs py-1">
+                    <span className="text-slate-400">Payment Mode:</span>
+                    <span className="font-bold text-amber-400 uppercase">{viewingOrder.payment_method || 'COD'}</span>
+                  </div>
+                  <div className="flex justify-between text-xs py-1">
+                    <span className="text-slate-400">Total Payable:</span>
+                    <span className="font-bold text-white">{formatPrice(viewingOrder.total_price)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs py-1">
+                    <span className="text-slate-400">Est. Delivery:</span>
+                    <span className="text-slate-300">{formatDate(viewingOrder.estimated_delivery)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Items List */}
+              <div className="bg-[#1E293B] border border-slate-700 rounded-2xl p-4 space-y-3">
+                <h4 className="font-bold text-white text-xs uppercase tracking-wider border-b border-slate-700 pb-2">
+                  Purchased Items ({viewingOrder.items?.length || 0})
+                </h4>
+                <div className="divide-y divide-slate-700/60">
+                  {viewingOrder.items?.map((item) => (
+                    <div key={item.id} className="py-3 flex items-center gap-3">
+                      {item.product?.image_url ? (
+                        <img
+                          src={item.product.image_url}
+                          alt={item.product.name}
+                          className="w-12 h-14 object-cover rounded-xl bg-slate-900 border border-slate-700 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-12 h-14 bg-slate-800 rounded-xl flex items-center justify-center text-slate-500 text-xs shrink-0">
+                          Item
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-white text-xs truncate">{item.product?.name || `Product #${item.product_id}`}</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">
+                          Size: <strong className="text-amber-400">{item.selected_size || 'M'}</strong> | Unit Rate: {formatPrice(item.price_at_order)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-slate-300 font-bold">Qty: {item.quantity}</p>
+                        <p className="text-xs font-bold text-amber-400">{formatPrice(item.price_at_order * item.quantity)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end mt-6 pt-3 border-t border-slate-700">
+              <button
+                onClick={() => { setShowDetailsModal(false); openInvoiceModal(viewingOrder); }}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 text-white font-bold text-xs hover:from-amber-500 transition-all flex items-center gap-1.5"
+              >
+                <FileText size={14} /> Generate Invoice
+              </button>
+              <button
+                onClick={() => setShowDetailsModal(false)}
+                className="px-4 py-2.5 rounded-xl border border-slate-600 text-slate-300 font-bold text-xs hover:bg-slate-800 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 3. GST TAX INVOICE GENERATOR & PRINT MODAL ── */}
+      {showInvoiceModal && invoiceOrder && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-[110] p-4">
+          <div className="bg-white text-slate-900 rounded-3xl p-8 max-w-3xl w-full shadow-2xl max-h-[92vh] overflow-y-auto custom-scrollbar">
+            
+            {/* Action Bar (Top) */}
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200 print:hidden">
+              <div className="flex items-center gap-2">
+                <FileText size={20} className="text-rose-900" />
+                <h3 className="font-bold text-lg text-slate-900">Official GST Tax Invoice</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handlePrintInvoice}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-rose-900 hover:bg-rose-800 text-white font-bold text-xs rounded-xl shadow-md transition-all"
+                >
+                  <Printer size={15} /> Print / Save PDF
+                </button>
+                <button
+                  onClick={() => setShowInvoiceModal(false)}
+                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Printable Tax Invoice Content */}
+            <div id="printable-invoice" className="space-y-6 text-xs text-slate-800">
+              
+              {/* Header Company Details */}
+              <div className="flex justify-between items-start border-b-2 border-slate-900 pb-4">
+                <div>
+                  <h1 className="text-2xl font-black text-rose-950 font-serif tracking-tight">LADLI BOUTIQUE</h1>
+                  <p className="font-medium text-slate-600">Royal Heritage Women Fashion Pvt. Ltd.</p>
+                  <p className="text-[11px] text-slate-500">104 Luxury Apparel Avenue, Commercial Hub, India</p>
+                  <p className="text-[11px] text-slate-500">GSTIN: 24AAACL8924F1Z3 | Support: care@ladli.com</p>
+                </div>
+                <div className="text-right">
+                  <span className="inline-block px-3 py-1 bg-slate-900 text-white font-bold text-xs uppercase tracking-wider rounded mb-1">
+                    TAX INVOICE
+                  </span>
+                  <p className="font-bold text-slate-900 text-sm">#INV-2026-{invoiceOrder.id}</p>
+                  <p className="text-[11px] text-slate-500">Date: {formatDate(invoiceOrder.created_at)}</p>
+                  <p className="text-[11px] text-slate-500 font-bold">Payment: {invoiceOrder.payment_method?.toUpperCase() || 'COD'}</p>
+                </div>
+              </div>
+
+              {/* Billed To / Shipped To */}
+              <div className="grid grid-cols-2 gap-6 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <div>
+                  <p className="font-black text-slate-900 uppercase text-[10px] tracking-wider mb-1">CUSTOMER BILLING DETAILS</p>
+                  <p className="font-bold text-slate-900">{invoiceOrder.shipping_name || `User #${invoiceOrder.user_id}`}</p>
+                  <p className="text-slate-600">Phone: {invoiceOrder.shipping_phone || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="font-black text-slate-900 uppercase text-[10px] tracking-wider mb-1">SHIPPING ADDRESS</p>
+                  <p className="text-slate-700 font-medium">
+                    {invoiceOrder.shipping_address}, {invoiceOrder.shipping_city}, {invoiceOrder.shipping_state} - {invoiceOrder.shipping_pincode}
+                  </p>
+                </div>
+              </div>
+
+              {/* Itemized Table */}
+              <table className="w-full text-left border-collapse border border-slate-300">
+                <thead>
+                  <tr className="bg-slate-900 text-white text-[10px] uppercase tracking-wider">
+                    <th className="p-2.5 border border-slate-800">S.No</th>
+                    <th className="p-2.5 border border-slate-800">Item Description</th>
+                    <th className="p-2.5 border border-slate-800">Size</th>
+                    <th className="p-2.5 border border-slate-800 text-center">Qty</th>
+                    <th className="p-2.5 border border-slate-800 text-right">Unit Rate</th>
+                    <th className="p-2.5 border border-slate-800 text-right">Amount (₹)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-300 text-xs">
+                  {invoiceOrder.items?.map((item, index) => (
+                    <tr key={item.id}>
+                      <td className="p-2.5 border border-slate-300 text-center font-bold">{index + 1}</td>
+                      <td className="p-2.5 border border-slate-300 font-bold text-slate-900">
+                        {item.product?.name || `Product #${item.product_id}`}
+                        {item.product?.fabric && <span className="block text-[10px] text-slate-500 font-normal">Fabric: {item.product.fabric}</span>}
+                      </td>
+                      <td className="p-2.5 border border-slate-300 font-bold">{item.selected_size || 'M'}</td>
+                      <td className="p-2.5 border border-slate-300 text-center font-bold">{item.quantity}</td>
+                      <td className="p-2.5 border border-slate-300 text-right">{formatPrice(item.price_at_order)}</td>
+                      <td className="p-2.5 border border-slate-300 text-right font-bold">{formatPrice(item.price_at_order * item.quantity)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Calculation Breakdown */}
+              <div className="flex justify-end pt-2">
+                <div className="w-64 space-y-1.5 text-xs">
+                  <div className="flex justify-between py-1 border-b border-slate-200">
+                    <span className="text-slate-600">Subtotal:</span>
+                    <span className="font-bold text-slate-900">{formatPrice(invoiceOrder.total_price)}</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-slate-200">
+                    <span className="text-slate-600">Shipping Charges:</span>
+                    <span className="font-bold text-emerald-700">FREE</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b-2 border-slate-900 text-sm font-black">
+                    <span className="text-slate-900">Total Invoice Amount:</span>
+                    <span className="text-rose-950">{formatPrice(invoiceOrder.total_price)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Terms */}
+              <div className="border-t border-slate-300 pt-4 text-[10px] text-slate-500 flex justify-between items-end">
+                <div>
+                  <p className="font-bold text-slate-700 mb-1">Terms &amp; Conditions:</p>
+                  <p>1. Returns accepted within 7 days with original tag.</p>
+                  <p>2. Computer-generated tax invoice. No signature required.</p>
+                </div>
+                <div className="text-right">
+                  <div className="h-10 border-b border-slate-400 w-32 mb-1"></div>
+                  <p className="font-bold text-slate-800">Authorized Signatory</p>
+                  <p className="text-[9px]">LADLI Boutique</p>
+                </div>
+              </div>
+
+            </div>
+
           </div>
         </div>
       )}

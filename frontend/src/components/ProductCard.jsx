@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { ShoppingBag, Heart, Star } from 'lucide-react';
+import { ShoppingBag, Heart, Star, Edit } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import { useAuth } from '../context/AuthContext';
 
 const ProductCard = ({ product }) => {
     const { addToCart } = useCart();
     const { toggleWishlist, isInWishlist } = useWishlist();
+    const { isAdmin, user } = useAuth();
     const [isHovered, setIsHovered] = useState(false);
+    const adminRole = isAdmin || user?.role === 'admin' || user?.role === 'logistics';
 
     // Mock rating for visual purpose
     const rating = (Math.random() * (5 - 3.5) + 3.5).toFixed(1);
@@ -31,7 +34,11 @@ const ProductCard = ({ product }) => {
 
                 {/* Badges */}
                 <div className="absolute top-3 left-3 flex flex-col gap-2">
-                    {product.price > 3000 && (
+                    {adminRole ? (
+                        <span className="px-2.5 py-1 bg-amber-500 text-black backdrop-blur-sm text-[10px] font-black uppercase tracking-wider rounded-md shadow-sm">
+                            Admin View
+                        </span>
+                    ) : product.price > 3000 && (
                         <span className="px-2.5 py-1 bg-white/90 dark:bg-black/80 backdrop-blur-sm text-[10px] font-bold uppercase tracking-wider text-text-main rounded-sm shadow-sm">
                             Premium
                         </span>
@@ -47,32 +54,44 @@ const ProductCard = ({ product }) => {
 
                 {/* Action Buttons (Visible on Hover) */}
                 <div className={`absolute bottom-0 left-0 right-0 p-3 flex gap-2 transition-transform duration-300 transform ${isHovered ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
+                    {adminRole ? (
+                        <Link
+                            to={`/admin/products/${product.id}/edit`}
+                            className="flex-1 bg-amber-500 hover:bg-amber-600 text-slate-950 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-colors"
+                        >
+                            <Edit size={16} />
+                            Edit Listing
+                        </Link>
+                    ) : (
+                        <button
+                            onClick={(e) => {
+                                e.preventDefault();
+                                addToCart(product);
+                            }}
+                            className="flex-1 bg-white dark:bg-slate-800 text-text-main py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 shadow-lg hover:bg-primary hover:text-white transition-colors active:scale-95"
+                        >
+                            <ShoppingBag size={16} />
+                            Add to Cart
+                        </button>
+                    )}
+                </div>
+
+                {/* Wishlist Button (Disabled for Admin) */}
+                {!adminRole && (
                     <button
                         onClick={(e) => {
                             e.preventDefault();
-                            addToCart(product);
+                            toggleWishlist(product);
                         }}
-                        className="flex-1 bg-white dark:bg-slate-800 text-text-main py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 shadow-lg hover:bg-primary hover:text-white transition-colors active:scale-95"
+                        className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                            isInWishlist(product.id) 
+                                ? 'bg-red-50 text-red-500 shadow-md' 
+                                : 'bg-white/80 dark:bg-black/50 text-text-muted hover:bg-white dark:hover:bg-slate-800 hover:text-red-500 shadow-sm'
+                        }`}
                     >
-                        <ShoppingBag size={16} />
-                        Add to Cart
+                        <Heart size={16} className={isInWishlist(product.id) ? "fill-current" : ""} />
                     </button>
-                </div>
-
-                {/* Wishlist Button (Always visible but changes on hover) */}
-                <button
-                    onClick={(e) => {
-                        e.preventDefault();
-                        toggleWishlist(product);
-                    }}
-                    className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
-                        isInWishlist(product.id) 
-                            ? 'bg-red-50 text-red-500 shadow-md' 
-                            : 'bg-white/80 dark:bg-black/50 text-text-muted hover:bg-white dark:hover:bg-slate-800 hover:text-red-500 shadow-sm'
-                    }`}
-                >
-                    <Heart size={16} className={isInWishlist(product.id) ? "fill-current" : ""} />
-                </button>
+                )}
             </div>
 
             {/* Product Details */}

@@ -15,6 +15,12 @@ def create_order(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
+    if current_user.role in ["admin", "logistics"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin accounts are reserved for store management and cannot place customer orders."
+        )
+
     total_price = 0
     items_to_create = []
 

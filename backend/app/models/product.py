@@ -17,6 +17,7 @@ class Product(Base):
     # Professional Store fields
     fabric = Column(String(100), nullable=True)
     sizes = Column(String(200), default="S,M,L,XL,2XL")  # Comma separated
+    colors = Column(String(250), default="Red,Maroon,Royal Blue,Mustard Yellow,Emerald Green,Rose Pink,Gold,Black")  # Comma separated
     image_urls = Column(Text, nullable=True)  # Comma-separated extra image URLs for product gallery
     created_at = Column(DateTime, default=datetime.utcnow)
 

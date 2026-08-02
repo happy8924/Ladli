@@ -351,65 +351,72 @@ const AdminDashboard = () => {
 
       </div>
 
-      {/* Recent Orders Section */}
-      <div className="bg-[#0F172A] border border-slate-700/60 shadow-2xl rounded-3xl p-6 shadow-xl">
-        <div className="flex items-center justify-between mb-6">
+      {/* Amazon / Flipkart Seller Central Quick Operations Control Panel */}
+      <div className="bg-[#0F172A] border border-slate-700/60 shadow-2xl rounded-3xl p-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-800">
           <div>
-            <h2 className="text-xl font-black font-serif text-white">Recent Orders</h2>
-            <p className="text-slate-400 text-xs">Latest customer purchases requiring fulfillment</p>
+            <h2 className="text-xl font-black font-serif text-white flex items-center gap-2">
+              <ShieldCheck size={20} className="text-amber-400" /> Seller Operations Control Panel
+            </h2>
+            <p className="text-slate-400 text-xs mt-1">
+              Quick access shortcuts for managing inventory, listings, store setup &amp; order fulfillment.
+            </p>
           </div>
-          <Link
-            to="/admin/orders"
-            className="text-amber-400 hover:text-amber-300 text-xs font-bold flex items-center gap-1"
-          >
-            View All Orders <Eye size={14} />
-          </Link>
+          <span className="text-xs bg-slate-800 text-slate-300 font-bold px-3 py-1.5 rounded-full border border-slate-700 self-start md:self-auto">
+            Amazon / Flipkart Seller Hub Mode Active
+          </span>
         </div>
 
-        {recentOrders.length === 0 ? (
-          <div className="text-center py-12 text-slate-500">
-            <Package size={40} className="mx-auto mb-2 opacity-30" />
-            <p className="text-xs font-bold text-slate-400">No recent orders found</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider text-left">
-                  <th className="py-3 px-3">Order ID</th>
-                  <th className="py-3 px-3">Customer</th>
-                  <th className="py-3 px-3">Date</th>
-                  <th className="py-3 px-3">Total Amount</th>
-                  <th className="py-3 px-3">Status</th>
-                  <th className="py-3 px-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {recentOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="py-3 px-3 font-bold text-white">#{order.id}</td>
-                    <td className="py-3 px-3 text-slate-300">{order.shipping_name || `User #${order.user_id}`}</td>
-                    <td className="py-3 px-3 text-slate-400">{formatDate(order.created_at)}</td>
-                    <td className="py-3 px-3 font-bold text-amber-400">{formatPrice(order.total_price)}</td>
-                    <td className="py-3 px-3">
-                      <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider border ${STATUS_COLORS[order.status] || STATUS_COLORS.pending}`}>
-                        {order.status}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 text-right">
-                      <Link
-                        to="/admin/orders"
-                        className="inline-flex p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white hover:bg-rose-900 transition-colors"
-                      >
-                        <Eye size={14} />
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Link
+            to="/admin/products/new"
+            className="group bg-[#1E293B] border border-slate-700 hover:border-amber-500/50 rounded-2xl p-5 transition-all hover:-translate-y-1 shadow-lg"
+          >
+            <div className="w-10 h-10 rounded-xl bg-rose-950/80 border border-rose-800/60 text-rose-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+              <Plus size={20} />
+            </div>
+            <h3 className="font-bold text-white text-sm group-hover:text-amber-400 transition-colors">Add New Product</h3>
+            <p className="text-slate-400 text-xs mt-1">Create new boutique listings with images &amp; pricing.</p>
+          </Link>
+
+          <Link
+            to="/admin/products"
+            className="group bg-[#1E293B] border border-slate-700 hover:border-amber-500/50 rounded-2xl p-5 transition-all hover:-translate-y-1 shadow-lg"
+          >
+            <div className="w-10 h-10 rounded-xl bg-emerald-950/80 border border-emerald-800/60 text-emerald-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+              <Package size={20} />
+            </div>
+            <h3 className="font-bold text-white text-sm group-hover:text-amber-400 transition-colors">Manage Inventory</h3>
+            <p className="text-slate-400 text-xs mt-1">Update stock levels, edit prices, fabric &amp; sizes.</p>
+          </Link>
+
+          <Link
+            to="/admin/orders"
+            className="group bg-[#1E293B] border border-slate-700 hover:border-amber-500/50 rounded-2xl p-5 transition-all hover:-translate-y-1 shadow-lg"
+          >
+            <div className="w-10 h-10 rounded-xl bg-blue-950/80 border border-blue-800/60 text-blue-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+              <ShoppingBag size={20} />
+            </div>
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-white text-sm group-hover:text-amber-400 transition-colors">Fulfillment Portal</h3>
+              <span className="text-[10px] bg-blue-500/20 text-blue-300 font-bold px-2 py-0.5 rounded-md border border-blue-500/30">
+                {stats.order_count} Orders
+              </span>
+            </div>
+            <p className="text-slate-400 text-xs mt-1">Process customer orders &amp; tracking in Order Center.</p>
+          </Link>
+
+          <Link
+            to="/"
+            className="group bg-[#1E293B] border border-slate-700 hover:border-amber-500/50 rounded-2xl p-5 transition-all hover:-translate-y-1 shadow-lg"
+          >
+            <div className="w-10 h-10 rounded-xl bg-purple-950/80 border border-purple-800/60 text-purple-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+              <Eye size={20} />
+            </div>
+            <h3 className="font-bold text-white text-sm group-hover:text-amber-400 transition-colors">Live Storefront</h3>
+            <p className="text-slate-400 text-xs mt-1">Preview customer view &amp; boutique catalog layout.</p>
+          </Link>
+        </div>
       </div>
 
     </div>

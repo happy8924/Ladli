@@ -93,23 +93,27 @@ const Navbar = () => {
             <Search size={20} />
           </Link>
 
-          <Link to="/wishlist" className="relative p-2 rounded-full text-text-muted hover:bg-white/5 transition-colors">
-            <Heart size={20} className={wishlistItems?.length > 0 ? 'text-secondary' : ''} />
-            {wishlistItems?.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-secondary text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center border-2 border-bg-card">
-                {wishlistItems.length}
-              </span>
-            )}
-          </Link>
+          {!isAdmin && !isLogistics && (
+            <>
+              <Link to="/wishlist" className="relative p-2 rounded-full text-text-muted hover:bg-white/5 transition-colors">
+                <Heart size={20} className={wishlistItems?.length > 0 ? 'text-secondary' : ''} />
+                {wishlistItems?.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-secondary text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center border-2 border-bg-card">
+                    {wishlistItems.length}
+                  </span>
+                )}
+              </Link>
 
-          <Link to="/cart" className="relative p-2 rounded-full text-text-muted hover:bg-white/5 transition-colors">
-            <ShoppingBag size={20} />
-            {cartItems?.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-primary text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center border-2 border-bg-card">
-                {cartItems.length}
-              </span>
-            )}
-          </Link>
+              <Link to="/cart" className="relative p-2 rounded-full text-text-muted hover:bg-white/5 transition-colors">
+                <ShoppingBag size={20} />
+                {cartItems?.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center border-2 border-bg-card">
+                    {cartItems.length}
+                  </span>
+                )}
+              </Link>
+            </>
+          )}
 
           {/* User */}
           <div className="hidden sm:block ml-1">

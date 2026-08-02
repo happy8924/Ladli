@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useAuth } from './AuthContext';
 
 const CartContext = createContext();
 
 const CART_STORAGE_KEY = 'ladli_cart';
 
 export const CartProvider = ({ children }) => {
+    const { user, isAdmin } = useAuth();
     const [cartItems, setCartItems] = useState(() => {
         try {
             const saved = localStorage.getItem(CART_STORAGE_KEY);
@@ -25,6 +27,11 @@ export const CartProvider = ({ children }) => {
 
     // ADD TO CART
     const addToCart = (product, selectedSize = 'M', quantity = 1) => {
+        if (isAdmin || user?.role === 'admin' || user?.role === 'logistics') {
+            alert('Admin accounts are for store management only. Please log in with a customer account to add items to cart and place orders.');
+            return;
+        }
+
         const itemKey = `${product.id}-${selectedSize}`;
 
         const existingIndex = cartItems.findIndex(
