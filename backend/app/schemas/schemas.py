@@ -14,6 +14,7 @@ class UserRole(str, Enum):
 class UserBase(BaseModel):
     username: str
     email: EmailStr
+    phone: Optional[str] = None
 
 
 class UserCreate(UserBase):
@@ -23,6 +24,7 @@ class UserCreate(UserBase):
 class UserOut(UserBase):
     id: int
     role: str
+    phone: Optional[str] = None
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
@@ -35,6 +37,28 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: Optional[str] = None
+
+
+# OTP & Password Reset Schemas
+class SendOTPRequest(BaseModel):
+    identifier: str
+    purpose: Optional[str] = "login"
+
+
+class OTPLoginRequest(BaseModel):
+    identifier: str
+    otp: str
+
+
+class ForgotPasswordVerifyRequest(BaseModel):
+    identifier: str
+
+
+class ForgotPasswordResetRequest(BaseModel):
+    identifier: str
+    otp: str
+    new_password: str
+
 
 
 # Category Schemas

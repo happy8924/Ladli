@@ -9,7 +9,7 @@ const Register = () => {
   const { register }  = useAuth();
 
   const [formData, setFormData] = useState({
-    username: '', email: '', password: '', confirmPassword: ''
+    username: '', email: '', phone: '', password: '', confirmPassword: ''
   });
   const [showPass, setShowPass]       = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -40,7 +40,7 @@ const Register = () => {
     setError(''); setSuccess('');
 
     if (!formData.username || !formData.email || !formData.password)
-      return setError('All fields are required');
+      return setError('Username, email, and password are required');
     if (formData.password !== formData.confirmPassword)
       return setError('Passwords do not match');
     if (formData.password.length < 6)
@@ -48,7 +48,7 @@ const Register = () => {
 
     try {
       setLoading(true);
-      const result = await register(formData.username, formData.email, formData.password);
+      const result = await register(formData.username, formData.email, formData.password, formData.phone);
       if (result.success) {
         setSuccess('Account created! Redirecting to login…');
         setTimeout(() => navigate('/login'), 1500);
@@ -63,8 +63,9 @@ const Register = () => {
   };
 
   const fields = [
-    { name: 'username', label: 'Username', type: 'text', placeholder: 'Choose a username', icon: null },
-    { name: 'email',    label: 'Email Address', type: 'email', placeholder: 'your@email.com', icon: null },
+    { name: 'username', label: 'Username', type: 'text', placeholder: 'Choose a username' },
+    { name: 'email',    label: 'Email Address', type: 'email', placeholder: 'your@email.com' },
+    { name: 'phone',    label: 'Mobile Phone (Optional)', type: 'tel', placeholder: 'e.g. 9876543210' },
   ];
 
   return (
