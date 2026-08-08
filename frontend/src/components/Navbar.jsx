@@ -26,7 +26,6 @@ const Navbar = () => {
     { name: 'Home',        path: '/'        },
     { name: 'Collections', path: '/catalog' },
     { name: 'New Arrivals',path: '/catalog?category=new' },
-    { name: 'About',       path: '/contact' },
   ];
 
   const isActive = (path) => {
