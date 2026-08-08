@@ -53,8 +53,7 @@ const getColorHex = (colorName) => {
   return COLOR_HEX_MAP[normalized] || '#94A3B8';
 };
 
-/* Returns real gallery images for a product:
-   Only returns actual product image and image_urls, avoiding random side images */
+/* Returns real gallery images for a product */
 const getGalleryImages = (product) => {
   if (!product) return [];
   const images = [];
@@ -64,14 +63,38 @@ const getGalleryImages = (product) => {
   if (product.image_urls) {
     const extra = product.image_urls
       .split(',')
-      .map(url => url.trim())
+      .map(entry => {
+        const item = entry.trim();
+        if (item.includes('|')) {
+          const parts = item.split('|');
+          return parts[1] ? parts[1].trim() : null;
+        }
+        return item;
+      })
       .filter(Boolean);
     images.push(...extra);
   }
   if (images.length === 0) {
     images.push('https://images.unsplash.com/photo-1610030469983-98e550d6153c?q=80&w=800&auto=format&fit=crop');
   }
-  return images;
+  return Array.from(new Set(images));
+};
+
+/* Returns color to image map for dynamic color switching */
+const getColorImageMap = (product) => {
+  const map = {};
+  if (product?.image_urls) {
+    product.image_urls.split(',').forEach(entry => {
+      const item = entry.trim();
+      if (item.includes('|')) {
+        const [colorName, url] = item.split('|');
+        if (colorName && url) {
+          map[colorName.trim().toLowerCase()] = url.trim();
+        }
+      }
+    });
+  }
+  return map;
 };
 
 /* ══════════════════════════════════════════
@@ -134,9 +157,9 @@ const RelatedCard = ({ product }) => {
 const ProductView = () => {
   const { id }     = useParams();
   const navigate   = useNavigate();
-  const { addToCart }                   = useCart();
-  const { user }                        = useAuth();
-  const { toggleWishlist, isInWishlist } = useWishlist();
+  const { addToCart, removeFromCart, isInCart } = useCart();
+  const { user }                                = useAuth();
+  const { toggleWishlist, isInWishlist }        = useWishlist();
   const { lens, handleMouseMove, handleMouseLeave, ZOOM } = useImageZoom();
 
   /* ── State ── */
@@ -211,15 +234,19 @@ const ProductView = () => {
 
   /* ── Actions ── */
   const handleAddToCart = () => {
-    if (!user) { navigate('/login'); return; }
-    addToCart(product, selectedSize, quantity);
-    setAdded(true);
-    setTimeout(() => setAdded(false), 2000);
+    if (isInCart(product.id, selectedSize)) {
+      removeFromCart(product.id, selectedSize);
+    } else {
+      addToCart(product, selectedSize, quantity);
+      setAdded(true);
+      setTimeout(() => setAdded(false), 2000);
+    }
   };
 
   const handleBuyNow = () => {
-    if (!user) { navigate('/login'); return; }
-    addToCart(product, selectedSize, quantity);
+    if (!isInCart(product.id, selectedSize)) {
+      addToCart(product, selectedSize, quantity);
+    }
     navigate('/cart');
   };
 
@@ -492,10 +519,17 @@ const ProductView = () => {
                     {colorsList.map(c => {
                       const hex = getColorHex(c);
                       const isSelected = (selectedColor || colorsList[0]).toLowerCase() === c.toLowerCase();
+                      const colorMap = getColorImageMap(product);
+                      const hasColorImage = Boolean(colorMap[c.toLowerCase()]);
                       return (
                         <button
                           key={c}
-                          onClick={() => setColor(c)}
+                          onClick={() => {
+                            setColor(c);
+                            if (colorMap[c.toLowerCase()]) {
+                              setMainImg(colorMap[c.toLowerCase()]);
+                            }
+                          }}
                           className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all border ${
                             isSelected
                               ? 'bg-primary text-white border-primary shadow-lg shadow-primary/25 scale-105 ring-2 ring-primary/40'
@@ -506,7 +540,10 @@ const ProductView = () => {
                             className="w-4 h-4 rounded-full border border-black/40 shrink-0 shadow-sm"
                             style={{ backgroundColor: hex }}
                           />
-                          {c}
+                          <span>{c}</span>
+                          {hasColorImage && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" title="Photo available" />
+                          )}
                         </button>
                       );
                     })}
@@ -567,14 +604,22 @@ const ProductView = () => {
                 </button>
                 <button
                   onClick={handleAddToCart}
-                  disabled={product.stock === 0 || addedFeedback}
+                  disabled={product.stock === 0}
                   className={`flex-1 py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all duration-200 active:scale-95 ${
                     addedFeedback
-                      ? 'bg-green-600 text-white'
-                      : 'bg-bg-card border-2 border-primary text-primary hover:bg-primary hover:text-white disabled:opacity-40'
+                      ? 'bg-emerald-600 text-white shadow-lg'
+                      : isInCart(product.id, selectedSize)
+                      ? 'bg-red-50 border-2 border-red-600 text-red-600 hover:bg-red-600 hover:text-white'
+                      : 'bg-white border-2 border-[#800000] text-[#800000] hover:bg-[#800000] hover:text-white shadow-md disabled:opacity-40'
                   }`}
                 >
-                  {addedFeedback ? <><CheckCircle size={18} /> Added!</> : <><ShoppingBag size={18} /> Add to Bag</>}
+                  {addedFeedback ? (
+                    <><CheckCircle size={18} /> Added to Cart!</>
+                  ) : isInCart(product.id, selectedSize) ? (
+                    <><Trash2 size={18} /> Remove from Cart</>
+                  ) : (
+                    <><ShoppingBag size={18} /> Add to Bag</>
+                  )}
                 </button>
                 <button
                   onClick={() => toggleWishlist(product)}

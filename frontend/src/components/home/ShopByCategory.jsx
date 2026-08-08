@@ -7,41 +7,44 @@ const CATEGORIES = [
     label: 'Bridal Edit',
     emoji: '👰',
     to: '/catalog?category=bridal',
-    image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?q=80&w=800&auto=format&fit=crop',
-    color: 'from-rose-900/90 via-rose-950/80 to-amber-950/70',
-    count: '48 handcrafted styles',
+    image: '/images/bridal.png',
+    fallback: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?q=80&w=800&auto=format&fit=crop',
+    color: 'from-[#5C0000]/90 via-[#800000]/75 to-transparent',
+    count: '48 Handcrafted Styles',
   },
   {
     label: 'Navratri Special',
     emoji: '🪔',
     to: '/catalog?category=navratri',
-    image: 'https://images.unsplash.com/photo-1610030469983-98e550d6153c?q=80&w=800&auto=format&fit=crop',
-    color: 'from-amber-900/90 via-red-950/80 to-rose-950/70',
-    count: '60 mirror-work sets',
+    image: '/images/navratri.png',
+    fallback: 'https://images.unsplash.com/photo-1610030469983-98e550d6153c?q=80&w=800&auto=format&fit=crop',
+    color: 'from-[#5C0000]/90 via-[#800000]/75 to-transparent',
+    count: '60 Mirror-Work Sets',
   },
   {
     label: 'New Arrivals',
     emoji: '👑',
     to: '/catalog?category=new',
-    image: 'https://images.unsplash.com/photo-1583391733958-d25e07facd68?q=80&w=800&auto=format&fit=crop',
-    color: 'from-emerald-950/90 via-teal-950/80 to-amber-950/70',
-    count: '24 fresh creations',
+    image: '/images/new_arrivals.png',
+    fallback: 'https://images.unsplash.com/photo-1583391733958-d25e07facd68?q=80&w=800&auto=format&fit=crop',
+    color: 'from-[#5C0000]/90 via-[#800000]/75 to-transparent',
+    count: '24 Fresh Creations',
   },
 ];
 
 const ShopByCategory = () => (
-  <section className="py-20 bg-bg-main">
+  <section className="py-20 bg-white border-b border-[#EADBC8]">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
       {/* Heading */}
       <div className="text-center mb-14">
-        <p className="text-secondary font-bold tracking-[0.25em] uppercase text-xs mb-2">Heritage Collections</p>
-        <h2 className="text-4xl md:text-5xl font-black font-serif text-text-main">Shop By Category</h2>
-        <div className="w-16 h-1 bg-gradient-to-r from-primary via-secondary to-primary mx-auto mt-4 rounded-full" />
+        <p className="text-[#C9A227] font-extrabold tracking-[0.25em] uppercase text-xs mb-2">Heritage Collections</p>
+        <h2 className="text-4xl md:text-5xl font-black font-serif text-gray-900">Shop By Category</h2>
+        <div className="w-20 h-1 bg-gradient-to-r from-[#800000] via-[#C9A227] to-[#800000] mx-auto mt-4 rounded-full" />
       </div>
 
       {/* 3 Column Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {CATEGORIES.map((cat, i) => (
           <motion.div
             key={cat.label}
@@ -52,34 +55,35 @@ const ShopByCategory = () => (
           >
             <Link
               to={cat.to}
-              className="group relative block rounded-3xl overflow-hidden aspect-[3/4] shadow-xl hover:shadow-2xl transition-all duration-500 border border-border-color"
+              className="group relative block rounded-3xl overflow-hidden aspect-[3/4] shadow-lg hover:shadow-2xl transition-all duration-500 border border-[#EADBC8] hover:border-[#C9A227]"
             >
-              {/* BG image */}
+              {/* BG image with onError fallback */}
               <img
                 src={cat.image}
+                onError={(e) => { e.target.src = cat.fallback; }}
                 alt={cat.label}
-                className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-700"
+                className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
               />
 
               {/* Gradient overlay */}
-              <div className={`absolute inset-0 bg-gradient-to-t ${cat.color} opacity-85 group-hover:opacity-75 transition-opacity duration-500`} />
+              <div className={`absolute inset-0 bg-gradient-to-t ${cat.color} opacity-85 group-hover:opacity-95 transition-opacity duration-500`} />
 
               {/* Card content */}
               <div className="absolute inset-0 p-6 flex flex-col justify-between z-10">
                 <div className="self-end">
-                  <span className="w-10 h-10 bg-black/30 backdrop-blur-md rounded-2xl border border-white/20 flex items-center justify-center text-xl shadow-lg">
+                  <span className="w-10 h-10 bg-white/90 backdrop-blur-md rounded-2xl border border-[#C9A227] flex items-center justify-center text-xl shadow-md">
                     {cat.emoji}
                   </span>
                 </div>
 
-                <div className="bg-black/40 backdrop-blur-md rounded-2xl border border-white/15 p-4 shadow-xl group-hover:bg-black/50 transition-colors">
-                  <h3 className="text-white font-black font-serif text-xl leading-tight mb-1">{cat.label}</h3>
-                  <p className="text-amber-200/90 text-xs font-medium">{cat.count}</p>
+                <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-[#EADBC8] p-5 shadow-xl group-hover:border-[#C9A227] transition-all">
+                  <h3 className="text-gray-900 font-black font-serif text-2xl leading-tight mb-1">{cat.label}</h3>
+                  <p className="text-[#800000] text-xs font-extrabold uppercase tracking-wider">{cat.count}</p>
                 </div>
               </div>
 
               {/* Hover arrow button */}
-              <div className="absolute top-4 left-4 w-9 h-9 bg-white/20 backdrop-blur-md rounded-full border border-white/30 flex items-center justify-center opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all duration-300">
+              <div className="absolute top-4 left-4 w-10 h-10 bg-[#800000] text-white rounded-full border border-[#C9A227] flex items-center justify-center opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all duration-300 shadow-md">
                 <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                 </svg>

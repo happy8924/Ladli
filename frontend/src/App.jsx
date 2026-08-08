@@ -1,36 +1,35 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import { CartProvider } from './context/CartContext';
+import { WishlistProvider } from './context/WishlistContext';
+import { RecentlyViewedProvider } from './components/RecentlyViewed';
+import { ToastProvider } from './context/ToastContext';
+import ProtectedRoute from './components/ProtectedRoute';
 import api from './api/api';
 
-// ── Providers (defined ONCE here, nowhere else) ──
-import { AuthProvider }           from './context/AuthContext';
-import { CartProvider }           from './context/CartContext';
-import { WishlistProvider }       from './context/WishlistContext';
-import { ToastProvider }          from './context/ToastContext';
-import { RecentlyViewedProvider } from './components/RecentlyViewed';
+// Components
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
+import BottomNav from './components/BottomNav';
+import BackToTop from './components/BackToTop';
 
-// ── Layout ──
-import Navbar         from './components/Navbar';
-import Footer         from './components/Footer';
-import BottomNav      from './components/BottomNav';
-import ProtectedRoute from './components/ProtectedRoute';
-import BackToTop      from './components/BackToTop';
-
-// ── Pages (existing) ──
-import Home              from './pages/Home';
-import Login             from './pages/Login';
-import ForgotPassword    from './pages/ForgotPassword';
-import Register          from './pages/Register';
-import ProductView       from './pages/ProductView';
-import Cart              from './pages/Cart';
-import Wishlist          from './pages/Wishlist';
-import Search            from './pages/Search';
-import ProductDetails    from './pages/ProductDetails';
-import AdminLayout       from './components/admin/AdminLayout';
-import AdminDashboard    from './pages/admin/AdminDashboard';
+// Pages
+import Home             from './pages/Home';
+import ProductView      from './pages/ProductView';
+import Login            from './pages/Login';
+import ForgotPassword   from './pages/ForgotPassword';
+import Register         from './pages/Register';
+import Cart             from './pages/Cart';
+import Wishlist         from './pages/Wishlist';
+import Search           from './pages/Search';
+import ProductDetails   from './pages/ProductDetails';
+import AdminLayout      from './components/admin/AdminLayout';
+import AdminDashboard   from './pages/admin/AdminDashboard';
 import ProductManagement from './pages/admin/ProductManagement';
-import ProductForm       from './pages/admin/ProductForm';
-import OrderManagement   from './pages/admin/OrderManagement';
+import ProductForm      from './pages/admin/ProductForm';
+import OrderManagement  from './pages/admin/OrderManagement';
+import AdminUsers       from './pages/admin/AdminUsers';
 
 // ── Pages (new) ──
 import Catalog    from './pages/Catalog';
@@ -92,6 +91,7 @@ function App() {
                       <Route path="/admin/products/new" element={<ProtectedRoute adminOnly><AdminLayout><ProductForm /></AdminLayout></ProtectedRoute>} />
                       <Route path="/admin/products/:id/edit" element={<ProtectedRoute adminOnly><AdminLayout><ProductForm /></AdminLayout></ProtectedRoute>} />
                       <Route path="/admin/orders"   element={<ProtectedRoute adminOnly><AdminLayout><OrderManagement /></AdminLayout></ProtectedRoute>} />
+                      <Route path="/admin/users"    element={<ProtectedRoute adminOnly><AdminLayout><AdminUsers /></AdminLayout></ProtectedRoute>} />
                     </Routes>
                   </main>
 

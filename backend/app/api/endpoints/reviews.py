@@ -24,10 +24,10 @@ class ReviewResponse(BaseModel):
     created_at: datetime
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
-@router.post("/", response_model=ReviewResponse, status_code=status.HTTP_201_CREATED)
-def create_review(review: ReviewCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@router.post("/", response_model=ReviewResponse, status_code=status.HTTP_200_OK)
+def create_or_update_review(review: ReviewCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     # Check if product exists
     product = db.query(Product).filter(Product.id == review.product_id).first()
     if not product:
@@ -37,14 +37,18 @@ def create_review(review: ReviewCreate, db: Session = Depends(get_db), current_u
     if review.rating < 1 or review.rating > 5:
         raise HTTPException(status_code=400, detail="Rating must be between 1 and 5")
 
-    # Check if user already reviewed this product
+    # Check if user already reviewed this product -> update existing
     existing_review = db.query(Review).filter(
         Review.user_id == current_user.id,
         Review.product_id == review.product_id
     ).first()
     
     if existing_review:
-        raise HTTPException(status_code=400, detail="You have already reviewed this product")
+        existing_review.rating = review.rating
+        existing_review.comment = review.comment
+        db.commit()
+        db.refresh(existing_review)
+        return existing_review
 
     # Create new review
     db_review = Review(
@@ -59,15 +63,43 @@ def create_review(review: ReviewCreate, db: Session = Depends(get_db), current_u
     
     return db_review
 
+@router.get("/my")
+def get_my_reviews(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    user_reviews = db.query(Review).filter(Review.user_id == current_user.id).all()
+    return [{
+        "id": r.id,
+        "product_id": r.product_id,
+        "rating": r.rating,
+        "comment": r.comment,
+        "created_at": r.created_at
+    } for r in user_reviews]
+
+@router.get("/recent")
+def get_recent_reviews(db: Session = Depends(get_db)):
+    reviews = db.query(Review).order_by(Review.created_at.desc()).limit(10).all()
+    result = []
+    for r in reviews:
+        user = db.query(User).filter(User.id == r.user_id).first()
+        product = db.query(Product).filter(Product.id == r.product_id).first()
+        result.append({
+            "id": r.id,
+            "rating": r.rating,
+            "comment": r.comment,
+            "created_at": r.created_at,
+            "username": user.username if user else "Customer",
+            "product_name": product.name if product else "Traditional Outfit",
+            "product_id": r.product_id
+        })
+    return result
+
 @router.get("/product/{product_id}")
 def get_product_reviews(product_id: int, db: Session = Depends(get_db)):
     reviews = db.query(Review).filter(Review.product_id == product_id).order_by(Review.created_at.desc()).all()
     
-    # Also calculate average rating and count
+    # Calculate average rating and count
     total_reviews = len(reviews)
     avg_rating = sum([r.rating for r in reviews]) / total_reviews if total_reviews > 0 else 0
     
-    # Return custom dict to easily include user info
     result = []
     for r in reviews:
         user = db.query(User).filter(User.id == r.user_id).first()
@@ -76,7 +108,7 @@ def get_product_reviews(product_id: int, db: Session = Depends(get_db)):
             "rating": r.rating,
             "comment": r.comment,
             "created_at": r.created_at,
-            "username": user.username if user else "Anonymous"
+            "username": user.username if user else "Customer"
         })
         
     return {

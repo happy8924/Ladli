@@ -84,6 +84,7 @@ class ProductBase(BaseModel):
     stock: int
     category_id: int
     image_url: Optional[str] = None
+    image_urls: Optional[str] = None
     fabric: Optional[str] = None
     sizes: str = "S,M,L,XL,2XL"
     colors: Optional[str] = "Red,Maroon,Royal Blue,Mustard Yellow,Emerald Green,Rose Pink,Gold,Black"

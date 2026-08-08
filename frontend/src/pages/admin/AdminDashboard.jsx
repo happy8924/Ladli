@@ -6,7 +6,7 @@ import {
   Eye, Plus, Footprints, BarChart3, RefreshCw, AlertTriangle,
   ArrowUpRight, Clock, ShieldCheck, Sparkles, CheckCircle2,
   ChevronRight, Bell, FileText, XCircle, AlertCircle, ArrowRight,
-  Info, CheckCircle
+  Info, CheckCircle, Mail, Phone, Crown, Home
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
@@ -15,12 +15,14 @@ import {
 } from 'recharts';
 
 const STATUS_COLORS = {
-  pending:    'bg-amber-500/10 text-amber-300 border-amber-500/30',
-  processing: 'bg-blue-500/10 text-blue-300 border-blue-500/30',
-  packaging:  'bg-purple-500/10 text-purple-300 border-purple-500/30',
-  shipped:    'bg-indigo-500/10 text-indigo-300 border-indigo-500/30',
-  delivered:  'bg-emerald-500/10 text-emerald-300 border-emerald-500/30',
-  cancelled:  'bg-rose-500/10 text-rose-300 border-rose-500/30',
+  pending:          'bg-amber-100 text-amber-900 border-amber-300 font-extrabold',
+  confirmed:        'bg-blue-100 text-blue-900 border-blue-300 font-extrabold',
+  processing:       'bg-purple-100 text-purple-900 border-purple-300 font-extrabold',
+  packaging:        'bg-purple-100 text-purple-900 border-purple-300 font-extrabold',
+  shipped:          'bg-indigo-100 text-indigo-900 border-indigo-300 font-extrabold',
+  out_for_delivery: 'bg-cyan-100 text-cyan-900 border-cyan-300 font-extrabold',
+  delivered:        'bg-emerald-100 text-emerald-900 border-emerald-300 font-extrabold',
+  cancelled:        'bg-rose-100 text-rose-900 border-rose-300 font-extrabold',
 };
 
 const PIE_COLORS = ['#800000', '#C9A227', '#059669', '#2563EB', '#7C3AED'];
@@ -31,12 +33,13 @@ const AdminDashboard = () => {
   const [analytics, setAnalytics] = useState({
     total_visitors: 0, sales_graph: [], monthly_revenue: [], top_products: [], top_categories: []
   });
-  const [recentOrders, setRecentOrders] = useState([]);
+  const [recentOrders, setRecentOrders]       = useState([]);
+  const [recentUsers, setRecentUsers]         = useState([]);
   const [lowStockProducts, setLowStockProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [errors, setErrors] = useState([]);
-  const [lastUpdated, setLastUpdated] = useState(null);
+  const [loading, setLoading]                 = useState(true);
+  const [refreshing, setRefreshing]           = useState(false);
+  const [errors, setErrors]                   = useState([]);
+  const [lastUpdated, setLastUpdated]         = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const isFirstLoad = useRef(true);
 
@@ -44,11 +47,12 @@ const AdminDashboard = () => {
     if (isFirstLoad.current) setLoading(true);
     else setRefreshing(true);
 
-    const [statsRes, ordersRes, analyticsRes, productsRes] = await Promise.allSettled([
+    const [statsRes, ordersRes, analyticsRes, productsRes, usersRes] = await Promise.allSettled([
       api.get('/admin/stats'),
       api.get('/orders/all'),
       api.get('/admin/analytics'),
       api.get('/products/'),
+      api.get('/admin/users'),
     ]);
 
     const newErrors = [];
@@ -76,6 +80,14 @@ const AdminDashboard = () => {
       const prods = Array.isArray(productsRes.value.data) ? productsRes.value.data : [];
       const lowStock = prods.filter(p => p.stock < 5);
       setLowStockProducts(lowStock);
+    }
+
+    if (usersRes.status === 'fulfilled') {
+      const usersList = Array.isArray(usersRes.value.data) ? usersRes.value.data : [];
+      setRecentUsers(usersList.slice(0, 5));
+      if (usersList.length > 0 && !statsRes.value?.data?.user_count) {
+        setStats(prev => ({ ...prev, user_count: usersList.length }));
+      }
     }
 
     setErrors(newErrors);
@@ -110,15 +122,15 @@ const AdminDashboard = () => {
   const notificationsList = [
     ...(lowStockProducts.length > 0 ? [{ id: 1, type: 'warning', title: 'Low Stock Alert', msg: `${lowStockProducts.length} items have inventory < 5 units. Please restock soon.`, link: '/admin/products', action: 'Restock Now' }] : []),
     ...(pendingOrdersCount > 0 ? [{ id: 2, type: 'info', title: 'Pending Fulfillment', msg: `${pendingOrdersCount} new customer orders waiting for processing and shipment.`, link: '/admin/orders', action: 'Manage Orders' }] : []),
-    { id: 3, type: 'success', title: 'Store System Operational', msg: 'Database & live analytics sync running smoothly with zero latency.', action: 'Active' }
+    { id: 3, type: 'success', title: 'Store System Operational', msg: `Database synced. ${stats.user_count || recentUsers.length} registered customer accounts active.`, action: 'Active' }
   ];
 
   const statCards = [
-    { label: 'Total Revenue',    value: formatPrice(stats.total_sales), icon: <DollarSign size={22} className="text-[#C9A227]" />, sub: 'Lifetime sales earnings' },
-    { label: 'Total Orders',     value: stats.order_count,              icon: <ShoppingBag size={22} className="text-[#C9A227]" />, sub: 'Processed orders count' },
-    { label: 'Catalog Products', value: stats.product_count,            icon: <Package size={22} className="text-[#C9A227]" />,     sub: 'Active store listings' },
-    { label: 'Registered Users', value: stats.user_count,               icon: <Users size={22} className="text-[#C9A227]" />,       sub: 'Customer accounts' },
-    { label: 'Store Visitors',   value: analytics.total_visitors,       icon: <Footprints size={22} className="text-[#C9A227]" />,  sub: 'Tracked site visits' },
+    { label: 'Total Revenue',    value: formatPrice(stats.total_sales), icon: <DollarSign size={22} className="text-[#C9A227]" />, sub: 'Lifetime sales earnings', link: '/admin/orders' },
+    { label: 'Total Orders',     value: stats.order_count,              icon: <ShoppingBag size={22} className="text-[#C9A227]" />, sub: 'Processed orders count', link: '/admin/orders' },
+    { label: 'Catalog Products', value: stats.product_count,            icon: <Package size={22} className="text-[#C9A227]" />,     sub: 'Active store listings', link: '/admin/products' },
+    { label: 'Registered Users', value: stats.user_count || recentUsers.length, icon: <Users size={22} className="text-[#C9A227]" />, sub: 'Registered customer accounts', link: '/admin/users' },
+    { label: 'Store Visitors',   value: analytics.total_visitors,       icon: <Footprints size={22} className="text-[#C9A227]" />,  sub: 'Tracked site visits', link: '#' },
   ];
 
   if (loading) {
@@ -148,27 +160,38 @@ const AdminDashboard = () => {
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className="bg-[#C9A227]/20 border border-[#C9A227]/50 text-[#C9A227] text-[11px] font-black uppercase tracking-widest px-3 py-1 rounded-full flex items-center gap-1.5">
-                <CrownIcon /> Official Admin Dashboard
+                <Crown size={14} /> Official Admin Dashboard
               </span>
             </div>
             <h1 className="text-3xl md:text-4xl font-black font-serif text-white tracking-tight flex items-center gap-3">
               Store Control Center <Sparkles size={24} className="text-[#C9A227]" />
             </h1>
             <p className="text-slate-200 text-xs md:text-sm mt-1 max-w-xl">
-              Welcome, <strong className="text-[#C9A227] font-bold">{user?.username || 'Administrator'}</strong>! Live revenue tracking, low-stock alerts, sales analytics &amp; recent order fulfillment.
+              Welcome, <strong className="text-[#C9A227] font-bold">{user?.username || 'Administrator'}</strong>! Live revenue tracking, customer registrations ({stats.user_count || recentUsers.length} Users), low-stock alerts &amp; analytics.
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0 flex-wrap relative z-30">
-            {/* Notifications Bell Dropdown */}
+          <div className="flex items-center gap-3 flex-wrap">
+            
+            {/* Home Page Button */}
+            <Link
+              to="/"
+              className="flex items-center gap-2 bg-[#2A0000] hover:bg-[#3B0000] border border-[#C9A227]/50 text-white px-4 py-3 rounded-2xl font-bold text-xs transition-all shadow-md"
+              title="Go to Home Page"
+            >
+              <Home size={16} className="text-[#C9A227]" />
+              <span>Home Page</span>
+            </Link>
+
+            {/* Notifications Button */}
             <div className="relative">
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
-                className="relative flex items-center gap-2 px-4 py-3 rounded-2xl bg-white/10 border border-[#C9A227]/50 text-white hover:bg-white/20 transition-all font-bold text-xs shadow-lg"
+                className="flex items-center gap-2 bg-[#2A0000] hover:bg-[#3B0000] border border-[#C9A227]/50 text-white px-4 py-3 rounded-2xl font-bold text-xs transition-all shadow-md"
                 title="View Notifications"
               >
                 <Bell size={18} className="text-[#C9A227] animate-pulse" />
-                <span>Notifications</span>
+                <span>Alerts</span>
                 {notificationsList.length > 0 && (
                   <span className="ml-1 px-2 py-0.5 bg-[#C9A227] text-[#4A0000] text-[11px] font-black rounded-full shadow-md">
                     {notificationsList.length}
@@ -254,72 +277,17 @@ const AdminDashboard = () => {
           <span className="flex items-center gap-1.5">
             <Clock size={13} className="text-[#C9A227]" /> Last Synced: {lastUpdated.toLocaleTimeString('en-IN')}
           </span>
-          <span className="text-slate-400">Live store tracking active</span>
+          <span className="text-slate-400">Live store tracking active • Registered Users: {stats.user_count || recentUsers.length}</span>
         </div>
       )}
 
-      {/* ── PROMINENT SYSTEM NOTIFICATIONS CARD ON DASHBOARD PAGE ── */}
-      <div className="bg-[#4A0000] border-2 border-[#C9A227]/60 rounded-3xl p-6 shadow-2xl space-y-4">
-        <div className="flex items-center justify-between border-b border-[#C9A227]/30 pb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-[#C9A227]/20 border border-[#C9A227]/50 text-[#C9A227]">
-              <Bell size={20} />
-            </div>
-            <div>
-              <h2 className="text-lg font-black font-serif text-white flex items-center gap-2">
-                Live Notifications &amp; System Alerts
-              </h2>
-              <p className="text-slate-300 text-xs">Real-time status updates requiring store admin action.</p>
-            </div>
-          </div>
-          <span className="text-xs font-black text-[#4A0000] bg-[#C9A227] px-3 py-1 rounded-full shadow">
-            {notificationsList.length} Active
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {notificationsList.map(item => (
-            <div
-              key={item.id}
-              className={`p-4 rounded-2xl border shadow-lg flex flex-col justify-between ${
-                item.type === 'warning'
-                  ? 'bg-[#2E0000] border-amber-500/50 text-amber-200'
-                  : item.type === 'info'
-                  ? 'bg-[#2E0000] border-blue-500/50 text-blue-200'
-                  : 'bg-[#2E0000] border-emerald-500/50 text-emerald-200'
-              }`}
-            >
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-black text-xs text-[#C9A227] flex items-center gap-1.5">
-                    {item.type === 'warning' && <AlertTriangle size={15} className="text-amber-400" />}
-                    {item.type === 'info' && <Info size={15} className="text-blue-400" />}
-                    {item.type === 'success' && <CheckCircle size={15} className="text-emerald-400" />}
-                    {item.title}
-                  </span>
-                </div>
-                <p className="text-slate-200 text-xs leading-relaxed">{item.msg}</p>
-              </div>
-
-              {item.link && (
-                <Link
-                  to={item.link}
-                  className="mt-3 inline-flex items-center gap-1 text-xs font-black text-[#4A0000] bg-[#C9A227] hover:bg-[#D4AF37] px-3.5 py-1.5 rounded-xl transition-all self-start shadow"
-                >
-                  {item.action} <ArrowRight size={13} />
-                </Link>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── 1. DASHBOARD CARDS ── */}
+      {/* ── 1. DASHBOARD STAT CARDS ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {statCards.map((card) => (
-          <div
+          <Link
             key={card.label}
-            className="bg-gradient-to-b from-[#4A0000] to-[#2E0000] border border-[#C9A227]/40 rounded-3xl p-5 relative overflow-hidden shadow-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#C9A227] group"
+            to={card.link}
+            className="bg-gradient-to-b from-[#4A0000] to-[#2E0000] border border-[#C9A227]/40 rounded-3xl p-5 relative overflow-hidden shadow-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#C9A227] group block"
           >
             <div className="flex items-center justify-between mb-3">
               <div className="p-2.5 rounded-2xl bg-black/40 border border-[#C9A227]/30 group-hover:scale-110 transition-transform">
@@ -332,11 +300,153 @@ const AdminDashboard = () => {
             </h3>
             <p className="text-xs font-bold text-[#C9A227] uppercase tracking-wider">{card.label}</p>
             <p className="text-[10px] text-slate-300 mt-1">{card.sub}</p>
-          </div>
+          </Link>
         ))}
       </div>
 
-      {/* ── 2. QUICK ACTIONS PANEL ── */}
+      {/* ── 2. ANALYTICS CHARTS SECTION ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        {/* Revenue Trend AreaChart */}
+        <div className="lg:col-span-2 bg-[#4A0000]/60 border border-[#C9A227]/40 rounded-3xl p-6 shadow-xl space-y-4">
+          <div className="flex items-center justify-between border-b border-[#C9A227]/20 pb-3">
+            <div className="flex items-center gap-2">
+              <TrendingUp size={20} className="text-[#C9A227]" />
+              <div>
+                <h2 className="text-lg font-black font-serif text-white">Revenue Trend &amp; Sales Analytics</h2>
+                <p className="text-slate-300 text-xs">Live sales performance graph</p>
+              </div>
+            </div>
+            <span className="text-[10px] font-black text-[#C9A227] bg-[#C9A227]/10 px-3 py-1 rounded-full border border-[#C9A227]/30 uppercase tracking-wider">
+              Real-time
+            </span>
+          </div>
+
+          <div className="h-72 w-full pt-4">
+            {analytics.sales_graph && analytics.sales_graph.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={analytics.sales_graph}>
+                  <defs>
+                    <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#C9A227" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#800000" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#800000" opacity={0.3} />
+                  <XAxis dataKey="date" stroke="#EADBC8" fontSize={11} />
+                  <YAxis stroke="#EADBC8" fontSize={11} tickFormatter={(val) => `₹${val}`} />
+                  <Tooltip contentStyle={chartTooltipStyle} formatter={(value) => [`₹${Number(value).toLocaleString('en-IN')}`, 'Sales']} />
+                  <Area type="monotone" dataKey="sales" stroke="#C9A227" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-slate-400 text-xs">
+                <BarChart3 size={32} className="text-[#C9A227] mb-2 opacity-50" />
+                No revenue trend data recorded yet.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Category Breakdown PieChart */}
+        <div className="bg-[#4A0000]/60 border border-[#C9A227]/40 rounded-3xl p-6 shadow-xl space-y-4 flex flex-col justify-between">
+          <div className="flex items-center justify-between border-b border-[#C9A227]/20 pb-3">
+            <div className="flex items-center gap-2">
+              <Package size={20} className="text-[#C9A227]" />
+              <div>
+                <h2 className="text-lg font-black font-serif text-white">Sales By Category</h2>
+                <p className="text-slate-300 text-xs">Product category distribution</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="h-64 w-full flex items-center justify-center">
+            {analytics.top_categories && analytics.top_categories.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={analytics.top_categories}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                    nameKey="name"
+                  >
+                    {analytics.top_categories.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={chartTooltipStyle} />
+                  <Legend wrapperStyle={{ fontSize: '11px', color: '#EADBC8' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex flex-col items-center justify-center text-slate-400 text-xs">
+                <PieChart size={32} className="text-[#C9A227] mb-2 opacity-50" />
+                No category distribution data available yet.
+              </div>
+            )}
+          </div>
+        </div>
+
+      </div>
+
+      {/* ── 3. REGISTERED CUSTOMERS & USERS SUITE ── */}
+      <div className="bg-[#4A0000]/60 border border-[#C9A227]/40 rounded-3xl p-6 shadow-xl space-y-4">
+        <div className="flex items-center justify-between border-b border-[#C9A227]/20 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-[#C9A227]/20 border border-[#C9A227]/50 text-[#C9A227]">
+              <Users size={20} />
+            </div>
+            <div>
+              <h2 className="text-lg font-black font-serif text-white flex items-center gap-2">
+                Registered Customer Accounts ({stats.user_count || recentUsers.length})
+              </h2>
+              <p className="text-slate-300 text-xs">Recent customer signups &amp; registered store accounts.</p>
+            </div>
+          </div>
+          <Link
+            to="/admin/users"
+            className="text-xs font-black text-[#4A0000] bg-[#C9A227] hover:bg-[#D4AF37] px-4 py-2 rounded-xl shadow transition-all flex items-center gap-1"
+          >
+            View All Users <ChevronRight size={14} />
+          </Link>
+        </div>
+
+        {recentUsers.length === 0 ? (
+          <div className="py-8 text-center text-slate-400 text-xs">Loading registered customer accounts...</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {recentUsers.map(u => (
+              <div key={u.id} className="bg-[#2E0000] border border-[#C9A227]/30 rounded-2xl p-4 flex items-center gap-3 shadow-md">
+                <div className="w-10 h-10 rounded-full bg-[#800000] text-amber-300 font-black flex items-center justify-center text-sm border border-[#C9A227]/50 shrink-0">
+                  {(u.username || 'U')[0].toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-1">
+                    <p className="font-extrabold text-white text-xs truncate">{u.username}</p>
+                    <span className="text-[10px] font-black uppercase text-[#C9A227] bg-[#C9A227]/10 px-2 py-0.5 rounded border border-[#C9A227]/30">
+                      {u.role || 'User'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 truncate mt-0.5 flex items-center gap-1">
+                    <Mail size={11} className="text-[#C9A227]" /> {u.email}
+                  </p>
+                  {u.phone && (
+                    <p className="text-[10px] text-emerald-400 truncate mt-0.5 flex items-center gap-1">
+                      <Phone size={10} /> {u.phone}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── 4. QUICK OPERATIONS PANEL ── */}
       <div className="bg-[#4A0000]/60 border border-[#C9A227]/40 rounded-3xl p-6 shadow-xl">
         <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#C9A227]/20">
           <h2 className="text-lg font-black font-serif text-white flex items-center gap-2">
@@ -383,257 +493,81 @@ const AdminDashboard = () => {
             </div>
             <div>
               <h3 className="font-bold text-white text-xs group-hover:text-[#C9A227] transition-colors">Order Fulfillment</h3>
-              <p className="text-[10px] text-slate-300">Process customer orders</p>
+              <p className="text-[10px] text-slate-300">Process shipping &amp; delivery</p>
             </div>
           </Link>
 
           <Link
-            to="/"
+            to="/admin/users"
             className="group bg-[#2E0000] border border-[#C9A227]/30 hover:border-[#C9A227] rounded-2xl p-4 transition-all hover:-translate-y-1 shadow-md flex items-center gap-3"
           >
             <div className="w-10 h-10 rounded-xl bg-[#800000] border border-[#C9A227]/40 text-[#C9A227] flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-              <Eye size={20} />
+              <Users size={20} />
             </div>
             <div>
-              <h3 className="font-bold text-white text-xs group-hover:text-[#C9A227] transition-colors">Live Storefront</h3>
-              <p className="text-[10px] text-slate-300">Preview customer view</p>
+              <h3 className="font-bold text-white text-xs group-hover:text-[#C9A227] transition-colors">Registered Users</h3>
+              <p className="text-[10px] text-slate-300">View registered customer accounts ({stats.user_count || recentUsers.length})</p>
             </div>
           </Link>
         </div>
-      </div>
-
-      {/* ── 3. LOW STOCK PRODUCTS WARNING ── */}
-      {lowStockProducts.length > 0 && (
-        <div className="bg-[#4A0000] border border-amber-500/50 rounded-3xl p-6 shadow-xl">
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-amber-500/20">
-            <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
-              <AlertTriangle size={18} /> Low Stock Warning ({lowStockProducts.length} items needing restock)
-            </div>
-            <Link to="/admin/products" className="text-xs text-[#C9A227] font-bold hover:underline flex items-center gap-1">
-              View All Products <ChevronRight size={14} />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-            {lowStockProducts.slice(0, 4).map((p) => (
-              <div key={p.id} className="bg-[#2E0000] border border-amber-500/30 rounded-2xl p-3.5 flex items-center justify-between">
-                <div className="min-w-0 pr-2">
-                  <p className="font-bold text-white text-xs truncate">{p.name}</p>
-                  <p className="text-[11px] text-slate-300">Stock: <strong className="text-red-400 font-bold">{p.stock} remaining</strong></p>
-                </div>
-                <Link
-                  to={`/admin/products/${p.id}/edit`}
-                  className="px-3 py-1.5 bg-[#C9A227] text-[#4A0000] rounded-xl text-[11px] font-black hover:bg-[#D4AF37] shrink-0 shadow-md"
-                >
-                  Restock
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── 4. ANALYTICS CHARTS GRID (Revenue Chart & Monthly Sales Chart) ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* Revenue Chart (14-Day Sales Revenue) */}
-        <div className="bg-[#4A0000]/60 border border-[#C9A227]/40 shadow-2xl rounded-3xl p-6">
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#C9A227]/20">
-            <div>
-              <h2 className="text-lg font-black font-serif text-white">14-Day Revenue Chart</h2>
-              <p className="text-slate-300 text-xs">Daily sales trend analysis</p>
-            </div>
-            <TrendingUp size={20} className="text-[#C9A227]" />
-          </div>
-
-          <ResponsiveContainer width="100%" height={230}>
-            <AreaChart data={analytics.sales_graph}>
-              <defs>
-                <linearGradient id="maroonGoldGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#C9A227" stopOpacity={0.6} />
-                  <stop offset="100%" stopColor="#800000" stopOpacity={0.1} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#600000" vertical={false} />
-              <XAxis dataKey="date" tick={{ fill: '#E2E8F0', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#E2E8F0', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={chartTooltipStyle} formatter={(v) => [`₹${v.toLocaleString('en-IN')}`, 'Revenue']} />
-              <Area type="monotone" dataKey="revenue" stroke="#C9A227" strokeWidth={3} fill="url(#maroonGoldGrad)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Monthly Sales Chart */}
-        <div className="bg-[#4A0000]/60 border border-[#C9A227]/40 shadow-2xl rounded-3xl p-6">
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#C9A227]/20">
-            <div>
-              <h2 className="text-lg font-black font-serif text-white">Monthly Sales Chart</h2>
-              <p className="text-slate-300 text-xs">Monthly breakdown over the last 6 months</p>
-            </div>
-            <BarChart3 size={20} className="text-[#C9A227]" />
-          </div>
-
-          <ResponsiveContainer width="100%" height={230}>
-            <BarChart data={analytics.monthly_revenue}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#600000" vertical={false} />
-              <XAxis dataKey="month" tick={{ fill: '#E2E8F0', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#E2E8F0', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={chartTooltipStyle} formatter={(v) => [`₹${v.toLocaleString('en-IN')}`, 'Sales Revenue']} />
-              <Bar dataKey="revenue" fill="#C9A227" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
       </div>
 
       {/* ── 5. RECENT ORDERS TABLE ── */}
-      <div className="bg-[#4A0000]/60 border border-[#C9A227]/40 shadow-2xl rounded-3xl p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-3 border-b border-[#C9A227]/20">
-          <div>
-            <h2 className="text-xl font-black font-serif text-white flex items-center gap-2">
-              <ShoppingBag size={20} className="text-[#C9A227]" /> Recent Customer Orders
-            </h2>
-            <p className="text-slate-300 text-xs mt-0.5">Latest order transactions placed on the boutique store.</p>
+      <div className="bg-[#4A0000]/60 border border-[#C9A227]/40 rounded-3xl p-6 shadow-xl space-y-4">
+        <div className="flex items-center justify-between border-b border-[#C9A227]/20 pb-3">
+          <div className="flex items-center gap-2">
+            <ShoppingBag size={20} className="text-[#C9A227]" />
+            <h2 className="text-lg font-black font-serif text-white">Recent Customer Orders</h2>
           </div>
-          <Link
-            to="/admin/orders"
-            className="flex items-center gap-1.5 text-xs text-[#C9A227] font-bold hover:underline self-start sm:self-auto"
-          >
-            View Order Management <ArrowRight size={14} />
+          <Link to="/admin/orders" className="text-xs font-black text-[#C9A227] hover:underline flex items-center gap-1">
+            View All Orders <ChevronRight size={14} />
           </Link>
         </div>
 
-        {recentOrders.length === 0 ? (
-          <div className="text-center py-12 text-slate-300">
-            <ShoppingBag size={40} className="mx-auto mb-2 opacity-30 text-[#C9A227]" />
-            <p className="font-bold text-white text-sm">No recent orders recorded yet.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead>
-                <tr className="border-b border-[#C9A227]/20 text-[#C9A227] uppercase text-[10px] tracking-wider">
-                  <th className="py-3 px-3">Order ID</th>
-                  <th className="py-3 px-3">Customer</th>
-                  <th className="py-3 px-3">Total Amount</th>
-                  <th className="py-3 px-3">Status</th>
-                  <th className="py-3 px-3">Order Date</th>
-                  <th className="py-3 px-3 text-right">Action</th>
+        <div className="overflow-x-auto rounded-2xl border border-[#C9A227]/30 bg-[#2E0000]">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-[#1F0000] text-[#C9A227] font-bold uppercase text-[10px] tracking-wider border-b border-[#C9A227]/30">
+              <tr>
+                <th className="px-6 py-4">Order ID</th>
+                <th className="px-6 py-4">Date</th>
+                <th className="px-6 py-4">Customer</th>
+                <th className="px-6 py-4">Total Price</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#C9A227]/20 text-slate-200">
+              {recentOrders.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-8 text-slate-400">No orders placed yet.</td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-[#600000]">
-                {recentOrders.map(order => (
+              ) : (
+                recentOrders.map(order => (
                   <tr key={order.id} className="hover:bg-white/5 transition-colors">
-                    <td className="py-3.5 px-3 font-bold text-white font-mono">
-                      #{order.order_number || order.id}
-                    </td>
-                    <td className="py-3.5 px-3 font-semibold text-slate-100">
-                      {order.full_name || order.shipping_name || `User #${order.user_id}`}
-                    </td>
-                    <td className="py-3.5 px-3 font-bold text-[#C9A227]">
-                      {formatPrice(order.total_amount)}
-                    </td>
-                    <td className="py-3.5 px-3">
-                      <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold border uppercase ${STATUS_COLORS[order.status?.toLowerCase()] || STATUS_COLORS.pending}`}>
-                        {order.status || 'Pending'}
+                    <td className="px-6 py-4 font-bold text-white">#{order.id}</td>
+                    <td className="px-6 py-4 text-slate-300">{formatDate(order.created_at)}</td>
+                    <td className="px-6 py-4 font-semibold text-white">{order.shipping_name || `User #${order.user_id}`}</td>
+                    <td className="px-6 py-4 font-bold text-[#C9A227]">{formatPrice(order.total_price)}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] uppercase border ${STATUS_COLORS[order.status] || 'bg-slate-800 text-slate-300 border-slate-700'}`}>
+                        {order.status}
                       </span>
                     </td>
-                    <td className="py-3.5 px-3 text-slate-300">
-                      {formatDate(order.created_at)}
-                    </td>
-                    <td className="py-3.5 px-3 text-right">
-                      <Link
-                        to="/admin/orders"
-                        className="px-3 py-1.5 bg-[#800000] hover:bg-[#600000] border border-[#C9A227]/40 text-[#C9A227] rounded-xl font-bold text-[11px] transition-colors"
-                      >
-                        Manage
+                    <td className="px-6 py-4 text-right">
+                      <Link to="/admin/orders" className="text-xs font-bold text-[#C9A227] hover:underline">
+                        Manage →
                       </Link>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* Top Products & Category Distribution */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        <div className="bg-[#4A0000]/60 border border-[#C9A227]/40 shadow-2xl rounded-3xl p-6">
-          <h2 className="text-lg font-black font-serif text-white mb-4 flex items-center gap-2">
-            <Sparkles size={18} className="text-[#C9A227]" /> Best-Selling Boutique Products
-          </h2>
-          {analytics.top_products.length === 0 ? (
-            <p className="text-slate-300 text-xs py-10 text-center">No product sales recorded yet.</p>
-          ) : (
-            <div className="space-y-4">
-              {analytics.top_products.map((p, i) => {
-                const max = analytics.top_products[0].revenue || 1;
-                return (
-                  <div key={p.name} className="space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-white font-bold truncate">{i + 1}. {p.name}</span>
-                      <span className="text-[#C9A227] font-bold shrink-0">{formatPrice(p.revenue)}</span>
-                    </div>
-                    <div className="h-2 bg-[#2E0000] rounded-full overflow-hidden border border-[#C9A227]/20">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-[#800000] via-[#A87B1C] to-[#C9A227]"
-                        style={{ width: `${(p.revenue / max) * 100}%` }}
-                      />
-                    </div>
-                    <p className="text-[10px] text-slate-300">{p.quantity_sold} units sold</p>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-
-        <div className="bg-[#4A0000]/60 border border-[#C9A227]/40 shadow-2xl rounded-3xl p-6">
-          <h2 className="text-lg font-black font-serif text-white mb-4 flex items-center gap-2">
-            <BarChart3 size={18} className="text-[#C9A227]" /> Category Sales Distribution
-          </h2>
-          {analytics.top_categories.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-slate-300">
-              <BarChart3 size={32} className="opacity-30 mb-2 text-[#C9A227]" />
-              <p className="text-xs">No category distribution recorded yet.</p>
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie
-                  data={analytics.top_categories}
-                  dataKey="revenue"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={45}
-                  outerRadius={75}
-                  paddingAngle={4}
-                >
-                  {analytics.top_categories.map((entry, i) => (
-                    <Cell key={entry.name} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={chartTooltipStyle} formatter={(v) => [`₹${v.toLocaleString('en-IN')}`, 'Revenue']} />
-                <Legend formatter={(value) => <span style={{ color: '#E2E8F0', fontSize: '0.75rem' }}>{value}</span>} />
-              </PieChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-
       </div>
 
     </div>
   );
 };
-
-/* Crown Helper Icon */
-const CrownIcon = () => (
-  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-    <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/>
-  </svg>
-);
 
 export default AdminDashboard;

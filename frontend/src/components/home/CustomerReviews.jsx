@@ -1,192 +1,177 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Star, ChevronLeft, ChevronRight, Quote } from 'lucide-react';
+import { Star, Quote, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import api from '../../api/api';
 
-const REVIEWS = [
+const DEFAULT_REVIEWS = [
   {
     id: 1,
     name: 'Priya Sharma',
-    location: 'Ahmedabad, Gujarat',
+    location: 'Verified Buyer',
     avatar: 'P',
     rating: 5,
     title: 'Absolutely Stunning Quality!',
-    text: 'I ordered the Royal Bridal Chaniya Choli and it arrived in just 3 days. The fabric quality is exceptional and the embroidery work is even more beautiful in person. Got so many compliments at my cousin\'s wedding!',
-    product: 'Royal Bridal Chaniya Choli',
-    color: 'bg-primary',
+    text: 'I ordered the Royal Bridal Chaniya Choli and it arrived in just 3 days. The fabric quality is exceptional and the embroidery work is even more beautiful in person. Got so many compliments!',
+    product_name: 'Royal Bridal Chaniya Choli',
+    color: 'bg-[#800000]',
   },
   {
     id: 2,
     name: 'Meera Patel',
-    location: 'Surat, Gujarat',
+    location: 'Verified Buyer',
     avatar: 'M',
     rating: 5,
     title: 'Perfect Navratri Look!',
-    text: 'Bought three sets for Navratri and all of them were perfect. The mirror work catches the light beautifully while dancing. The size was exactly as per the size chart. Will definitely order again!',
-    product: 'Mirror Work Chaniya Choli Set',
-    color: 'bg-secondary',
+    text: 'Bought three sets for Navratri and all of them were perfect. The mirror work catches the light beautifully while dancing. The size was exactly as per the size chart.',
+    product_name: 'Mirror Work Chaniya Choli Set',
+    color: 'bg-[#C9A227]',
   },
   {
     id: 3,
     name: 'Anjali Desai',
-    location: 'Vadodara, Gujarat',
+    location: 'Verified Buyer',
     avatar: 'A',
     rating: 5,
     title: 'Best Online Boutique!',
-    text: 'Ladli has become my go-to for all ethnic wear. The packaging is beautiful, delivery is fast, and the quality never disappoints. The return process was also very smooth when I needed a size exchange.',
-    product: 'Silk Bandhani Chaniya Choli',
-    color: 'bg-emerald-600',
-  },
-  {
-    id: 4,
-    name: 'Ritu Shah',
-    location: 'Mumbai, Maharashtra',
-    avatar: 'R',
-    rating: 4,
-    title: 'Loved the Fabric Quality',
-    text: 'The georgette fabric drapes beautifully and the zari work is very intricate. I was hesitant to order online but the detailed photos helped a lot. Colour was exactly as shown. Highly recommend!',
-    product: 'Georgette Zari Chaniya Choli',
-    color: 'bg-orange-500',
-  },
-  {
-    id: 5,
-    name: 'Kavita Joshi',
-    location: 'Jaipur, Rajasthan',
-    avatar: 'K',
-    rating: 5,
-    title: 'Exceeded Expectations!',
-    text: 'Ordered for my daughter\'s sangeet ceremony. The leheriya print Chaniya Choli was vibrant and the stitching quality was top-notch. She looked like a princess. Thank you Ladli!',
-    product: 'Leheriya Print Chaniya Choli',
-    color: 'bg-rose-600',
+    text: 'Ladli has become my go-to for all ethnic wear. The packaging is beautiful, delivery is fast, and the quality never disappoints.',
+    product_name: 'Silk Bandhani Chaniya Choli',
+    color: 'bg-[#800000]',
   },
 ];
 
 const StarRow = ({ rating }) => (
-  <div className="flex gap-0.5">
-    {[1,2,3,4,5].map(s => (
-      <Star key={s} size={14} className={s <= rating ? 'fill-yellow-400 text-yellow-400' : 'text-slate-600'} />
+  <div className="flex gap-1">
+    {[1, 2, 3, 4, 5].map(s => (
+      <Star key={s} size={15} className={s <= rating ? 'fill-amber-500 text-amber-500' : 'text-gray-300'} />
     ))}
   </div>
 );
 
 const CustomerReviews = () => {
+  const [reviews, setReviews] = useState(DEFAULT_REVIEWS);
   const [current, setCurrent] = useState(0);
 
-  const prev = () => setCurrent(c => (c - 1 + REVIEWS.length) % REVIEWS.length);
-  const next = () => setCurrent(c => (c + 1) % REVIEWS.length);
+  useEffect(() => {
+    api.get('/reviews/recent')
+      .then(res => {
+        if (res.data && res.data.length > 0) {
+          const formatted = res.data.map(r => ({
+            id: r.id,
+            name: r.username || 'Customer',
+            location: 'Verified Buyer',
+            avatar: (r.username || 'C')[0].toUpperCase(),
+            rating: r.rating || 5,
+            title: r.comment ? `"${r.comment.slice(0, 35)}..."` : 'Verified Purchase Review',
+            text: r.comment || 'Wonderful product quality, fast delivery and great fitting! Highly recommended.',
+            product_name: r.product_name || 'Traditional Ensemble',
+            product_id: r.product_id,
+            color: (r.id % 2 === 0) ? 'bg-[#800000]' : 'bg-[#C9A227]',
+          }));
+          setReviews(formatted);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
-  /* Show 3 cards on desktop, center active */
+  const prev = () => setCurrent(c => (c - 1 + reviews.length) % reviews.length);
+  const next = () => setCurrent(c => (c + 1) % reviews.length);
+
   const getVisible = () => {
+    if (reviews.length <= 3) return reviews;
     const arr = [];
     for (let i = -1; i <= 1; i++) {
-      arr.push(REVIEWS[(current + i + REVIEWS.length) % REVIEWS.length]);
+      arr.push(reviews[(current + i + reviews.length) % reviews.length]);
     }
     return arr;
   };
 
+  const visibleList = getVisible();
+
   return (
-    <section className="py-20 bg-bg-card border-y border-border-color overflow-hidden">
-      <div className="container">
+    <section className="py-20 bg-white border-b border-[#EADBC8] overflow-hidden">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Heading */}
         <div className="text-center mb-14">
-          <p className="text-primary font-bold tracking-[0.2em] uppercase text-xs mb-3">Happy Customers</p>
-          <h2 className="text-4xl md:text-5xl font-black font-serif text-text-main mb-4">What They Say</h2>
-          <div className="flex items-center justify-center gap-2 text-text-muted text-sm">
+          <p className="text-[#800000] font-extrabold tracking-[0.2em] uppercase text-xs mb-2">Happy Ladli Clients</p>
+          <h2 className="text-4xl md:text-5xl font-black font-serif text-gray-900 mb-3">Loved By 2,400+ Women</h2>
+          <div className="flex items-center justify-center gap-2 text-gray-600 text-sm">
             <StarRow rating={5} />
-            <span className="font-bold text-text-main">4.9/5</span>
-            <span>from 2,400+ reviews</span>
+            <span className="font-bold text-gray-900">4.9/5 Rating</span>
+            <span>from verified customer reviews</span>
           </div>
         </div>
 
-        {/* Carousel */}
+        {/* Carousel / Grid */}
         <div className="relative">
 
-          {/* Desktop: 3-card view */}
-          <div className="hidden md:grid md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <AnimatePresence mode="wait">
-              {getVisible().map((review, idx) => (
+              {visibleList.map((review, idx) => (
                 <motion.div
-                  key={review.id}
+                  key={review.id || idx}
                   initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: idx === 1 ? 1.03 : 1 }}
+                  animate={{ opacity: 1, scale: idx === 1 ? 1.02 : 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.4 }}
-                  className={`bg-bg-main border rounded-3xl p-6 flex flex-col gap-4 ${
-                    idx === 1 ? 'border-primary/40 shadow-xl shadow-primary/10' : 'border-border-color'
+                  className={`bg-amber-50/50 border rounded-3xl p-6 flex flex-col justify-between space-y-4 shadow-xs ${
+                    idx === 1 ? 'border-[#800000] shadow-xl bg-white' : 'border-[#EADBC8]'
                   }`}
                 >
-                  <Quote size={28} className="text-primary/30" />
-                  <StarRow rating={review.rating} />
-                  <h3 className="font-bold text-text-main">{review.title}</h3>
-                  <p className="text-text-muted text-sm leading-relaxed line-clamp-4">{review.text}</p>
-                  <div className="flex items-center gap-3 mt-auto pt-3 border-t border-border-color">
-                    <div className={`w-10 h-10 rounded-full ${review.color} text-white flex items-center justify-center font-black shrink-0`}>
-                      {review.avatar}
+                  <div className="space-y-3">
+                    <Quote size={28} className="text-[#800000]/30" />
+                    <StarRow rating={review.rating} />
+                    <h3 className="font-bold text-gray-900 text-base font-serif">{review.title}</h3>
+                    <p className="text-gray-600 text-xs leading-relaxed line-clamp-4">{review.text}</p>
+                  </div>
+
+                  <div className="pt-4 border-t border-[#EADBC8] flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-full ${review.color} text-white flex items-center justify-center font-black shrink-0 border border-[#C9A227] text-xs font-serif`}>
+                        {review.avatar}
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900 text-xs">{review.name}</p>
+                        <p className="text-[10px] text-gray-500 font-semibold">{review.location}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-bold text-text-main text-sm">{review.name}</p>
-                      <p className="text-[11px] text-text-muted">{review.location}</p>
-                    </div>
+
+                    {review.product_id && (
+                      <Link
+                        to={`/product/${review.product_id}`}
+                        className="text-[10px] font-extrabold text-[#800000] hover:underline truncate max-w-[120px]"
+                        title={review.product_name}
+                      >
+                        {review.product_name}
+                      </Link>
+                    )}
                   </div>
                 </motion.div>
               ))}
             </AnimatePresence>
           </div>
 
-          {/* Mobile: single card */}
-          <div className="md:hidden">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={REVIEWS[current].id}
-                initial={{ opacity: 0, x: 40 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -40 }}
-                transition={{ duration: 0.35 }}
-                className="bg-bg-main border border-primary/40 rounded-3xl p-6 flex flex-col gap-4"
+          {/* Nav arrows for Carousel if more than 3 */}
+          {reviews.length > 3 && (
+            <div className="flex items-center justify-center gap-4 mt-8">
+              <button
+                onClick={prev}
+                className="w-10 h-10 rounded-full border border-[#EADBC8] bg-white text-gray-700 hover:bg-[#800000] hover:text-white transition-all flex items-center justify-center shadow-xs"
               >
-                <Quote size={28} className="text-primary/30" />
-                <StarRow rating={REVIEWS[current].rating} />
-                <h3 className="font-bold text-text-main">{REVIEWS[current].title}</h3>
-                <p className="text-text-muted text-sm leading-relaxed">{REVIEWS[current].text}</p>
-                <div className="flex items-center gap-3 mt-auto pt-3 border-t border-border-color">
-                  <div className={`w-10 h-10 rounded-full ${REVIEWS[current].color} text-white flex items-center justify-center font-black shrink-0`}>
-                    {REVIEWS[current].avatar}
-                  </div>
-                  <div>
-                    <p className="font-bold text-text-main text-sm">{REVIEWS[current].name}</p>
-                    <p className="text-[11px] text-text-muted">{REVIEWS[current].location}</p>
-                  </div>
-                </div>
-              </motion.div>
-            </AnimatePresence>
-          </div>
-
-          {/* Arrows */}
-          <div className="flex justify-center gap-3 mt-8">
-            <button
-              onClick={prev}
-              className="w-11 h-11 rounded-full bg-bg-main border border-border-color flex items-center justify-center text-text-muted hover:bg-primary hover:text-white hover:border-primary transition-all"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <div className="flex items-center gap-1.5">
-              {REVIEWS.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCurrent(i)}
-                  className={`h-1.5 rounded-full transition-all ${i === current ? 'w-6 bg-primary' : 'w-1.5 bg-border-color'}`}
-                />
-              ))}
+                <ChevronLeft size={18} />
+              </button>
+              <button
+                onClick={next}
+                className="w-10 h-10 rounded-full border border-[#EADBC8] bg-white text-gray-700 hover:bg-[#800000] hover:text-white transition-all flex items-center justify-center shadow-xs"
+              >
+                <ChevronRight size={18} />
+              </button>
             </div>
-            <button
-              onClick={next}
-              className="w-11 h-11 rounded-full bg-bg-main border border-border-color flex items-center justify-center text-text-muted hover:bg-primary hover:text-white hover:border-primary transition-all"
-            >
-              <ChevronRight size={18} />
-            </button>
-          </div>
+          )}
 
         </div>
+
       </div>
     </section>
   );

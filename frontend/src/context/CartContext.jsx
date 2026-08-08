@@ -28,76 +28,129 @@ export const CartProvider = ({ children }) => {
     // ADD TO CART
     const addToCart = (product, selectedSize = 'M', quantity = 1) => {
         if (isAdmin || user?.role === 'admin' || user?.role === 'logistics') {
-            alert('Admin accounts are for store management only. Please log in with a customer account to add items to cart and place orders.');
+            alert('Admin accounts are for store management only. Please log in with a customer account to add items to cart.');
             return;
         }
 
-        const itemKey = `${product.id}-${selectedSize}`;
+        const size = selectedSize || 'M';
+        const itemKey = product.cartItemId || `${product.id}-${size}`;
 
-        const existingIndex = cartItems.findIndex(
-            item => item.cartItemId === itemKey || (item.id === product.id && item.selectedSize === selectedSize)
-        );
-
-        if (existingIndex > -1) {
-            setCartItems(
-                cartItems.map((item, idx) =>
-                    idx === existingIndex
-                        ? {
-                            ...item,
-                            quantity: item.quantity + (quantity || 1)
-                        }
-                        : item
-                )
+        setCartItems(prevItems => {
+            const existingIndex = prevItems.findIndex(
+                item => (item.cartItemId && item.cartItemId === itemKey) ||
+                        (item.id === product.id && item.selectedSize === size)
             );
-        } else {
-            setCartItems([
-                ...cartItems,
-                {
-                    ...product,
-                    cartItemId: itemKey,
-                    selectedSize: selectedSize || 'M',
-                    quantity: quantity || 1
-                }
-            ]);
-        }
+
+            if (existingIndex > -1) {
+                return prevItems.map((item, idx) =>
+                    idx === existingIndex
+                        ? { ...item, quantity: item.quantity + (quantity || 1) }
+                        : item
+                );
+            } else {
+                return [
+                    ...prevItems,
+                    {
+                        ...product,
+                        cartItemId: itemKey,
+                        selectedSize: size,
+                        quantity: quantity || 1
+                    }
+                ];
+            }
+        });
     };
 
-    // INCREASE
+    // INCREASE QUANTITY
     const increaseQuantity = (id, selectedSize) => {
-        setCartItems(
-            cartItems.map(item => {
-                const match = selectedSize
-                    ? (item.id === id && item.selectedSize === selectedSize) || item.cartItemId === `${id}-${selectedSize}`
-                    : item.id === id || item.cartItemId === id;
-                return match ? { ...item, quantity: item.quantity + 1 } : item;
+        setCartItems(prevItems =>
+            prevItems.map(item => {
+                const targetStr = String(id);
+                const itemIdStr = String(item.id);
+                const cartItemIdStr = String(item.cartItemId || '');
+
+                const isMatch = selectedSize
+                    ? (item.id === id && item.selectedSize === selectedSize) ||
+                      cartItemIdStr === `${id}-${selectedSize}` ||
+                      cartItemIdStr === targetStr
+                    : itemIdStr === targetStr || cartItemIdStr === targetStr || cartItemIdStr === `${targetStr}-M`;
+
+                return isMatch ? { ...item, quantity: item.quantity + 1 } : item;
             })
         );
     };
 
-    // DECREASE
+    // DECREASE QUANTITY
     const decreaseQuantity = (id, selectedSize) => {
-        setCartItems(
-            cartItems
+        setCartItems(prevItems =>
+            prevItems
                 .map(item => {
-                    const match = selectedSize
-                        ? (item.id === id && item.selectedSize === selectedSize) || item.cartItemId === `${id}-${selectedSize}`
-                        : item.id === id || item.cartItemId === id;
-                    return match ? { ...item, quantity: item.quantity - 1 } : item;
+                    const targetStr = String(id);
+                    const itemIdStr = String(item.id);
+                    const cartItemIdStr = String(item.cartItemId || '');
+
+                    const isMatch = selectedSize
+                        ? (item.id === id && item.selectedSize === selectedSize) ||
+                          cartItemIdStr === `${id}-${selectedSize}` ||
+                          cartItemIdStr === targetStr
+                        : itemIdStr === targetStr || cartItemIdStr === targetStr || cartItemIdStr === `${targetStr}-M`;
+
+                    return isMatch ? { ...item, quantity: item.quantity - 1 } : item;
                 })
                 .filter(item => item.quantity > 0)
         );
     };
 
-    // REMOVE
-    const removeFromCart = (id, selectedSize) => {
-        setCartItems(
-            cartItems.filter(item => {
-                if (selectedSize) {
-                    return !((item.id === id && item.selectedSize === selectedSize) || item.cartItemId === `${id}-${selectedSize}`);
+    // REMOVE FROM CART (Supports object, cartItemId string, or id + selectedSize)
+    const removeFromCart = (idOrItem, selectedSize) => {
+        setCartItems(prevItems =>
+            prevItems.filter(item => {
+                // If passed object
+                if (typeof idOrItem === 'object' && idOrItem !== null) {
+                    const targetKey = idOrItem.cartItemId || `${idOrItem.id}-${idOrItem.selectedSize || 'M'}`;
+                    const itemKey = item.cartItemId || `${item.id}-${item.selectedSize || 'M'}`;
+                    return itemKey !== targetKey && item.id !== idOrItem.id;
                 }
-                return item.id !== id && item.cartItemId !== id;
+
+                // If explicit size passed
+                if (selectedSize) {
+                    const isMatch = (item.id === idOrItem && item.selectedSize === selectedSize) ||
+                                    (item.cartItemId === `${idOrItem}-${selectedSize}`) ||
+                                    (item.cartItemId === idOrItem);
+                    return !isMatch;
+                }
+
+                // Match by numeric/string id or cartItemId
+                const targetStr = String(idOrItem);
+                const itemIdStr = String(item.id);
+                const cartItemIdStr = String(item.cartItemId || '');
+
+                const isMatch = itemIdStr === targetStr ||
+                                cartItemIdStr === targetStr ||
+                                cartItemIdStr.startsWith(`${targetStr}-`);
+
+                return !isMatch;
             })
         );
+    };
+
+    // CHECK IF IN CART
+    const isInCart = (productId, selectedSize = 'M') => {
+        const targetStr = String(productId);
+        return cartItems.some(item =>
+            String(item.id) === targetStr ||
+            item.cartItemId === `${productId}-${selectedSize}` ||
+            item.cartItemId === targetStr
+        );
+    };
+
+    // TOGGLE CART
+    const toggleCart = (product, selectedSize = 'M') => {
+        if (isInCart(product.id, selectedSize)) {
+            removeFromCart(product.id, selectedSize);
+        } else {
+            addToCart(product, selectedSize);
+        }
     };
 
     // CLEAR CART
@@ -118,7 +171,7 @@ export const CartProvider = ({ children }) => {
 
     // TOTAL PRICE
     const totalPrice = cartItems.reduce(
-        (total, item) => total + item.price * item.quantity,
+        (total, item) => total + (item.price || 0) * item.quantity,
         0
     );
 
@@ -130,6 +183,8 @@ export const CartProvider = ({ children }) => {
                 removeFromCart,
                 increaseQuantity,
                 decreaseQuantity,
+                isInCart,
+                toggleCart,
                 clearCart,
                 totalItems,
                 totalPrice

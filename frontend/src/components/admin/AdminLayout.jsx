@@ -5,10 +5,11 @@ import {
   LayoutDashboard,
   Package,
   ShoppingBag,
+  Users,
   LogOut,
   Menu,
   X,
-  Store,
+  Home,
   Crown,
   Bell,
   ChevronRight,
@@ -16,9 +17,10 @@ import {
 } from 'lucide-react';
 
 const menuItems = [
-  { path: '/admin',          label: 'Dashboard',  icon: LayoutDashboard, description: 'Store analytics & performance' },
-  { path: '/admin/products', label: 'Products',   icon: Package,         description: 'Catalog & inventory management' },
-  { path: '/admin/orders',   label: 'Orders',     icon: ShoppingBag,     description: 'Fulfillment & shipment tracking' },
+  { path: '/admin',          label: 'Dashboard',         icon: LayoutDashboard, description: 'Store analytics & performance' },
+  { path: '/admin/products', label: 'Products',          icon: Package,         description: 'Catalog & inventory management' },
+  { path: '/admin/orders',   label: 'Orders',            icon: ShoppingBag,     description: 'Fulfillment & shipment tracking' },
+  { path: '/admin/users',    label: 'Customers & Users', icon: Users,           description: 'Registered customer profiles' },
 ];
 
 const AdminLayout = ({ children }) => {
@@ -28,7 +30,8 @@ const AdminLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    document.documentElement.classList.add('dark');
+    document.documentElement.classList.add('admin-dark');
+    return () => document.documentElement.classList.remove('admin-dark');
   }, []);
 
   const handleLogout = () => {
@@ -42,7 +45,7 @@ const AdminLayout = ({ children }) => {
   const currentMenu = menuItems.find(i => isActive(i.path));
 
   return (
-    <div className="flex min-h-screen bg-[#070A11] text-slate-100 font-sans selection:bg-rose-900 selection:text-white">
+    <div className="admin-dark flex min-h-screen bg-[#070A11] text-slate-100 font-sans selection:bg-rose-900 selection:text-white">
 
       {/* ── SIDEBAR ── */}
       <aside
@@ -119,97 +122,65 @@ const AdminLayout = ({ children }) => {
             </ul>
           </div>
 
-          <div>
-            <p className="text-[11px] font-black text-slate-500 uppercase tracking-widest px-3 mb-3">
-              Store Preview
-            </p>
+          {/* Home Page Link */}
+          <div className="pt-4 border-t border-slate-800/80">
             <Link
               to="/"
-              onClick={() => setSidebarOpen(false)}
-              className="flex items-center gap-3 px-3.5 py-3 rounded-2xl border border-slate-800/80 text-slate-400 hover:bg-slate-800/60 hover:text-white transition-all group"
+              className="flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-slate-400 hover:bg-slate-800/50 hover:text-amber-400 transition-colors text-xs font-semibold"
             >
-              <Store size={18} className="text-slate-400 group-hover:text-amber-400 transition-colors" />
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold">Customer Storefront</span>
-                <span className="text-[11px] text-slate-500">View live website</span>
-              </div>
+              <Home size={18} />
+              <span>Home Page</span>
+              <ChevronRight size={14} className="ml-auto opacity-60" />
             </Link>
           </div>
         </nav>
 
-        {/* Admin User Profile Box */}
-        <div className="p-4 border-t border-slate-800/80 bg-[#0D1322]">
-          <div className="flex items-center gap-3 p-2 rounded-xl bg-slate-900/60 border border-slate-800/50 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-700 to-amber-600 text-white font-black flex items-center justify-center shrink-0 shadow-md">
-              {user?.username?.charAt(0).toUpperCase() || 'A'}
+        {/* User Footer Profile */}
+        <div className="p-4 border-t border-slate-800/80 bg-slate-900/40">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center font-bold text-sm shrink-0">
+                {(user?.username || 'A')[0].toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-white truncate">{user?.username || 'Administrator'}</p>
+                <p className="text-[10px] text-amber-400 font-semibold capitalize flex items-center gap-1">
+                  <ShieldCheck size={10} /> {user?.role || 'Admin'}
+                </p>
+              </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="font-bold text-slate-100 text-xs truncate flex items-center gap-1">
-                {user?.username} <ShieldCheck size={13} className="text-amber-400 shrink-0" />
-              </p>
-              <p className="text-[10px] text-slate-400 capitalize truncate font-mono">
-                Role: {user?.role || 'administrator'}
-              </p>
-            </div>
-          </div>
 
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-950/40 border border-red-900/40 text-red-400 hover:bg-red-900/40 hover:text-red-200 transition-all text-xs font-bold"
-          >
-            <LogOut size={15} /> Sign Out Admin
-          </button>
+            <button
+              onClick={handleLogout}
+              className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 transition-colors"
+              title="Logout"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
         </div>
       </aside>
 
-      {/* Mobile Backdrop */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[999] lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
       {/* ── MAIN CONTENT AREA ── */}
       <div className="flex-1 flex flex-col min-w-0">
-        
-        {/* Header Bar */}
-        <header className="h-16 bg-[#0F172A]/95 backdrop-blur-md border-b border-slate-700/60 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-[100]">
+        {/* Mobile Header Bar */}
+        <header className="lg:hidden flex items-center justify-between px-6 py-4 bg-[#0F172A] border-b border-slate-800 sticky top-0 z-40">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setSidebarOpen(o => !o)}
-              className="lg:hidden p-2 rounded-xl bg-slate-800/60 text-slate-400 hover:text-white transition-colors"
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 rounded-xl bg-slate-800 text-slate-200 hover:text-white"
             >
               <Menu size={20} />
             </button>
-
-            <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
-              <span className="hover:text-slate-200 cursor-pointer">Admin Suite</span>
-              <ChevronRight size={14} className="text-slate-600" />
-              <span className="text-amber-400 font-bold">
-                {currentMenu?.label || 'Dashboard'}
-              </span>
-            </div>
+            <h1 className="font-serif font-black text-white text-base">LADLI ADMIN</h1>
           </div>
-
-          <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center gap-2 bg-slate-800/50 border border-slate-700/50 text-slate-300 px-3 py-1.5 rounded-xl text-xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              System Status: <span className="text-emerald-400 font-bold">Online</span>
-            </div>
-
-            <button
-              title="System Notifications"
-              className="relative p-2 rounded-xl bg-slate-800/60 text-slate-400 hover:text-white transition-colors border border-slate-700/40"
-            >
-              <Bell size={18} />
-              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500" />
-            </button>
-          </div>
+          <span className="text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-full capitalize">
+            {currentMenu?.label || 'Admin'}
+          </span>
         </header>
 
-        {/* Content Body */}
-        <main className="flex-1 p-4 lg:p-8">
+        {/* Page Content View */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
           {children}
         </main>
       </div>

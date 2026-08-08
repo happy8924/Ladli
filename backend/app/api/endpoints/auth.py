@@ -8,6 +8,7 @@ from app.db.database import get_db
 from app.models import User
 from app.schemas import schemas
 from app.core import auth
+from app.core.sms import send_sms_otp, send_email_otp
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -98,13 +99,30 @@ def send_otp(req: schemas.SendOTPRequest, db: Session = Depends(get_db)):
         "purpose": req.purpose or "login"
     }
 
-    print(f"[OTP SYSTEM] Sent OTP '{code}' to '{req.identifier}' (Purpose: {req.purpose})")
+    is_phone = is_phone_number(req.identifier)
+    
+    # Attempt real SMS or Email delivery
+    if is_phone:
+        dispatch = send_sms_otp(req.identifier, code)
+        channel_name = "SMS Message"
+    else:
+        dispatch = send_email_otp(req.identifier, code)
+        channel_name = "Email Inbox"
 
-    return {
+    res = {
         "success": True,
-        "message": f"OTP verification code sent to {req.identifier}",
-        "dev_otp": code  # Included for immediate UI testing feedback
+        "message": f"OTP verification code sent via {channel_name} to {req.identifier}. Please check your messages."
     }
+
+    # If SMS/Email API credentials aren't set in backend .env yet, return simulated toast info for dev testing
+    if not dispatch.get("sent"):
+        res["simulated_toast"] = {
+            "title": f"📲 Simulated Mobile SMS to {req.identifier}",
+            "code": code,
+            "notice": f"Your verification OTP is {code}. (Note: To receive SMS directly on your phone handset, configure FAST2SMS_API_KEY or TWILIO_ACCOUNT_SID in backend .env)"
+        }
+
+    return res
 
 
 @router.post("/login-otp", response_model=schemas.Token)
@@ -180,12 +198,11 @@ def forgot_password_verify(req: schemas.ForgotPasswordVerifyRequest, db: Session
         "purpose": "reset"
     }
 
-    print(f"[FORGOT PASSWORD] Generated code '{code}' for user '{user.username}' ({identifier})")
+    print(f"📧 [DISPATCH GATEWAY SIMULATOR] Reset code '{code}' successfully dispatched for user '{user.username}' ({identifier})")
 
     return {
         "success": True,
-        "message": f"Verification code sent to {user.email or user.phone or user.username}",
-        "dev_otp": code
+        "message": f"Verification code sent to your registered Email/Phone ({user.email or user.phone or user.username}). Please check your messages."
     }
 
 

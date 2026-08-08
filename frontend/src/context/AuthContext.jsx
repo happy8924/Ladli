@@ -96,7 +96,7 @@ export const AuthProvider = ({ children }) => {
       return {
         success: true,
         message: response.data.message,
-        dev_otp: response.data.dev_otp
+        simulated_toast: response.data.simulated_toast
       };
     } catch (error) {
       console.error('Send OTP Error:', error.response || error);
@@ -145,8 +145,7 @@ export const AuthProvider = ({ children }) => {
       const response = await api.post('/auth/forgot-password/verify', { identifier });
       return {
         success: true,
-        message: response.data.message,
-        dev_otp: response.data.dev_otp
+        message: response.data.message
       };
     } catch (error) {
       console.error('Verify Forgot Password Error:', error.response || error);

@@ -8,15 +8,15 @@ import {
 } from 'lucide-react';
 
 const ORDER_STATUSES = [
-  { value: 'pending',          label: 'Pending',          icon: Clock,        cls: 'bg-amber-500/10 text-amber-300 border-amber-500/30' },
-  { value: 'confirmed',        label: 'Confirmed',        icon: CheckCircle2, cls: 'bg-blue-500/10 text-blue-300 border-blue-500/30' },
-  { value: 'processing',       label: 'Processing',       icon: Edit,         cls: 'bg-purple-500/10 text-purple-300 border-purple-500/30' },
-  { value: 'shipped',          label: 'Shipped',          icon: Truck,        cls: 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30' },
-  { value: 'out_for_delivery', label: 'Out For Delivery', icon: Navigation,   cls: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30' },
-  { value: 'delivered',        label: 'Delivered',        icon: CheckCircle,  cls: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30' },
-  { value: 'cancelled',        label: 'Cancelled',        icon: XCircle,      cls: 'bg-rose-500/10 text-rose-300 border-rose-500/30' },
-  { value: 'return_requested', label: 'Return Requested', icon: RefreshCw,    cls: 'bg-orange-500/10 text-orange-300 border-orange-500/30' },
-  { value: 'returned',         label: 'Returned',         icon: RotateCcw,    cls: 'bg-slate-500/10 text-slate-300 border-slate-500/30' },
+  { value: 'pending',          label: 'Pending',          icon: Clock,        cls: 'bg-amber-100 text-amber-900 border-amber-300 font-black' },
+  { value: 'confirmed',        label: 'Confirmed',        icon: CheckCircle2, cls: 'bg-blue-100 text-blue-900 border-blue-300 font-black' },
+  { value: 'processing',       label: 'Processing',       icon: Edit,         cls: 'bg-purple-100 text-purple-900 border-purple-300 font-black' },
+  { value: 'shipped',          label: 'Shipped',          icon: Truck,        cls: 'bg-indigo-100 text-indigo-900 border-indigo-300 font-black' },
+  { value: 'out_for_delivery', label: 'Out For Delivery', icon: Navigation,   cls: 'bg-cyan-100 text-cyan-900 border-cyan-300 font-black' },
+  { value: 'delivered',        label: 'Delivered',        icon: CheckCircle,  cls: 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black' },
+  { value: 'cancelled',        label: 'Cancelled',        icon: XCircle,      cls: 'bg-rose-100 text-rose-900 border-rose-300 font-black' },
+  { value: 'return_requested', label: 'Return Requested', icon: RefreshCw,    cls: 'bg-orange-100 text-orange-900 border-orange-300 font-black' },
+  { value: 'returned',         label: 'Returned',         icon: RotateCcw,    cls: 'bg-slate-100 text-slate-900 border-slate-300 font-black' },
 ];
 
 const statusMeta = (val) => {
